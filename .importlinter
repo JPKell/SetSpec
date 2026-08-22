@@ -1,0 +1,18 @@
+[importlinter]
+root_packages = setspec
+
+[importlinter:contract:no-application-imports]
+name = SetSpec must not import applications
+type = forbidden
+source_modules = setspec
+forbidden_modules =
+    freeweight
+    loadcoach
+    ideapress
+
+[importlinter:contract:no-sibling-packages]
+name = SetSpec must not import sibling capability packages
+type = forbidden
+source_modules = setspec
+forbidden_modules =
+    # (none)
