@@ -1,18 +1,27 @@
 [importlinter]
-root_packages = setspec
+root_packages =
+    setspec
+# The forbidden modules below are external distributions, not submodules of setspec, so the graph
+# has to include external packages for the contracts to be able to see them at all.
+include_external_packages = True
 
 [importlinter:contract:no-application-imports]
 name = SetSpec must not import applications
 type = forbidden
-source_modules = setspec
+source_modules =
+    setspec
 forbidden_modules =
     freeweight
     loadcoach
     ideapress
 
-[importlinter:contract:no-sibling-packages]
-name = SetSpec must not import sibling capability packages
+[importlinter:contract:no-capability-packages]
+name = SetSpec must not import capability packages
 type = forbidden
-source_modules = setspec
+source_modules =
+    setspec
 forbidden_modules =
-    # (none)
+    modelrack
+    sweatmeter
+    weightsdb
+    mirrorwall
