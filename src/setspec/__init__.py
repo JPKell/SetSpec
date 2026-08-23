@@ -5,12 +5,24 @@ configuration, no logging, no HTTP, and no behaviour beyond structural and range
 package answers "is this a well-formed result?" — never "is this a *good* result?", which belongs
 to the application that computed it ([spec §3](../../docs/packages/setspec/spec.md)).
 
-What is exported below is the public API as of Phase 1
+What is exported below is every piece of **shared, non-versioned** infrastructure as of Phase 2
 (``docs/packages/setspec/development-plan.md``): the schema envelope, version parsing and the
 reader policy; canonical serialization with the ``Unsupported`` and RFC 3339 codecs; the strict and
-preserving payload bases with the generator that pairs them; and ``MetricValue``. Payload types
-themselves — benchmark results, capability evidence, events, errors — arrive in Phases 2 and 3.
-Anything not listed in ``__all__`` is private and may change without a version bump.
+preserving payload bases with the generator that pairs them; ``MetricValue``; and the capability
+vocabulary. Anything not listed in ``__all__`` is private and may change without a version bump.
+
+**Payload types are not re-exported here.** ``model.identity``, ``machine.profile``,
+``benchmark.result``, ``benchmark.run_summary``, ``capability.evidence`` and
+``benchmark.evidence_bundle`` (Phase 2) live in their own versioned modules —
+``setspec.model.v1``, ``setspec.machine.v1``, ``setspec.benchmark.v1``, ``setspec.capability.v1`` —
+and are imported from there, e.g. ``from setspec.capability.v1 import CapabilityEvidenceOut``.
+This is not an oversight: [ADR-0009 rule 6](../../docs/adr/0009-setspec-schema-strategy.md)
+requires a v1 payload to remain importable as ``setspec.benchmark.v1`` for a deprecation window
+after ``benchmark.result 2.0`` ships, which only works if ``v1`` and ``v2`` are different modules
+rather than two classes racing for one flat name. ``MetricValue`` and the vocabulary helpers below
+are re-exported flatly because neither is itself a versioned wire payload — they are shared
+infrastructure a payload's fields are built from, exactly like the envelope and serialization
+helpers above them.
 
     >>> from setspec import GeneratorInfo, SchemaVersion, dump_envelope
     >>> generator = GeneratorInfo(name="freeweight", version="1.0.0")
@@ -56,8 +68,16 @@ from setspec.serialization import (
     canonical_dumps,
     parse_json,
 )
+from setspec.vocabulary import (
+    CAPABILITIES,
+    CAPABILITY_VOCABULARY_VERSION,
+    is_known_capability,
+    validate_capability,
+)
 
 __all__ = [
+    "CAPABILITIES",
+    "CAPABILITY_VOCABULARY_VERSION",
     "MAX_PAYLOAD_BYTES",
     "MAX_PAYLOAD_DEPTH",
     "SUPPORTED_SCHEMAS",
@@ -75,12 +95,14 @@ __all__ = [
     "SchemaVersionUnsupported",
     "StrictPayload",
     "TimestampField",
-    "WireEnum",
     "ValidationError",
+    "WireEnum",
     "__version__",
     "canonical_dumps",
     "dump_envelope",
+    "is_known_capability",
     "load_envelope",
     "parse_json",
     "payload_models",
+    "validate_capability",
 ]

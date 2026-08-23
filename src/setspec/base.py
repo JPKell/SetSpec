@@ -28,7 +28,7 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Annotated, Any, Final, cast
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -38,6 +38,7 @@ __all__ = [
     "PreservingPayload",
     "StrictPayload",
     "WireEnum",
+    "WireSequence",
     "payload_models",
 ]
 
@@ -69,7 +70,20 @@ class PayloadDefinition(BaseModel):
     typed as the definition itself. Without a common ancestor a type checker would see the
     generated classes as bare bases with no fields, and every consumer of a payload — in this
     repository and in the three applications — would need a cast to read one.
+
+    **Nesting one payload inside another.** A field can be typed directly as another definition —
+    ``model: ModelIdentityFields`` inside ``CapabilityEvidenceFields`` — rather than as that
+    definition's generated ``Out`` or ``In``. This is deliberate, not an oversight: the outer
+    payload's own Out/In split already governs whether *the document as a whole* may carry an
+    unknown field, and ADR-0009 rule 4's guarantee that matters most is that a reader never
+    *loses* data. A definition's own ``extra="allow"`` (below) makes every nested payload
+    preserving by default in both directions — a writer embedding a stray field one level down is
+    a narrower gap than a reader silently discarding one, and accepting that narrower gap avoids
+    generating a full, independently-versioned Out/In pair for every sub-structure that is never
+    transmitted on its own.
     """
+
+    model_config = ConfigDict(**_SHARED_CONFIG, extra="allow")
 
     @property
     def extras(self) -> Mapping[str, Any]:
@@ -145,6 +159,34 @@ Relaxing strictness here costs nothing: membership is still exact, so an unknown
 index and a bool are all still refused. Use it for every enum field in every payload::
 
     aggregation: WireEnum[Aggregation]
+"""
+
+
+def _coerce_to_tuple(value: object) -> object:
+    """Convert a list or tuple to a tuple; pass anything else through for pydantic to reject.
+
+    JSON has one sequence type, and it deserializes to a Python ``list``. Strict mode validates
+    the *input Python type* against the annotation, and a bare ``tuple[T, ...]`` under
+    ``strict=True`` accepts only an actual ``tuple`` — never the ``list`` every real document
+    supplies — so every ordered-collection field would reject every real document without this.
+    """
+    if isinstance(value, list | tuple):
+        return tuple(value)
+    return value
+
+
+type WireSequence[T] = Annotated[tuple[T, ...], BeforeValidator(_coerce_to_tuple)]
+"""An ordered collection field that accepts a JSON array and stores it as an immutable tuple.
+
+Needed for the same reason as :data:`WireEnum`, one layer down: JSON arrays deserialize to
+``list``, but a payload is a document (frozen, and meant to stay that way all the way down), so
+the field itself is a ``tuple`` — a stored ``list`` would leave a mutable object reachable through
+an otherwise-immutable model. Element types are still validated strictly and individually; only
+the *container's own type* is relaxed, exactly as :data:`WireEnum` relaxes only the enum's own
+strictness. Use it for every ordered-collection field in every payload::
+
+    gpus: WireSequence[GpuProfileFields] = ()
+    source_run_ids: WireSequence[str] = ()
 """
 
 

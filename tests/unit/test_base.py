@@ -13,6 +13,7 @@ from pydantic import ConfigDict
 from pydantic import ValidationError as PydanticValidationError
 
 from setspec import PayloadDefinition, PreservingPayload, StrictPayload, payload_models
+from setspec.base import WireSequence
 
 
 class ThingFields(PayloadDefinition):
@@ -93,3 +94,70 @@ class TestGeneratedConfig:
         payload = in_.model_validate({"n": 1, "future": 2})
         with pytest.raises(TypeError):
             payload.extras["another"] = 3  # type: ignore[index]  # read-only, asserted at runtime
+
+
+class TestWireSequence:
+    """A JSON array validates into an immutable tuple, never a mutable list."""
+
+    def test_a_json_array_becomes_a_tuple(self) -> None:
+        class Sequenced(PayloadDefinition):
+            nums: WireSequence[int] = ()
+
+        payload = Sequenced.model_validate({"nums": [1, 2, 3]})
+        assert payload.nums == (1, 2, 3)
+        assert isinstance(payload.nums, tuple)
+
+    def test_a_python_tuple_is_still_accepted(self) -> None:
+        class Sequenced(PayloadDefinition):
+            nums: WireSequence[int] = ()
+
+        assert Sequenced(nums=(1, 2)).nums == (1, 2)
+
+    def test_elements_are_still_validated_strictly(self) -> None:
+        class Sequenced(PayloadDefinition):
+            nums: WireSequence[int] = ()
+
+        with pytest.raises(PydanticValidationError):
+            Sequenced.model_validate({"nums": ["1"]})
+
+    def test_a_non_sequence_is_rejected(self) -> None:
+        class Sequenced(PayloadDefinition):
+            nums: WireSequence[int] = ()
+
+        with pytest.raises(PydanticValidationError):
+            Sequenced.model_validate({"nums": 5})
+
+    def test_default_is_an_empty_tuple(self) -> None:
+        class Sequenced(PayloadDefinition):
+            nums: WireSequence[int] = ()
+
+        assert Sequenced().nums == ()
+
+
+class TestNestedPayloadPreservation:
+    """A definition embedded directly (not through payload_models) always preserves unknown keys.
+
+    This is the design in the ``PayloadDefinition`` docstring: nesting a bare ``*Fields`` class,
+    rather than its generated ``Out``/``In``, means the nested object never loses data regardless
+    of which half of the *outer* pair is in use.
+    """
+
+    def test_a_bare_definition_preserves_unknown_keys_when_nested(self) -> None:
+        class InnerFields(PayloadDefinition):
+            a: int
+
+        class OuterFields(PayloadDefinition):
+            inner: InnerFields
+
+        outer = OuterFields.model_validate({"inner": {"a": 1, "b": 2}})
+        assert outer.inner.extras == {"b": 2}
+
+    def test_a_bare_definition_still_validates_its_known_fields_strictly(self) -> None:
+        class InnerFields(PayloadDefinition):
+            a: int
+
+        class OuterFields(PayloadDefinition):
+            inner: InnerFields
+
+        with pytest.raises(PydanticValidationError):
+            OuterFields.model_validate({"inner": {"a": "not an int"}})

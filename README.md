@@ -2,9 +2,11 @@
 
 Every versioned data contract that crosses an application boundary: benchmark results, capability evidence, event/error envelopes, prompt records.
 
-**Status:** `0.1.0` — Phase 1 complete. The envelope, version negotiation and serialization core
-are implemented and tested; the payload types they carry arrive in Phases 2 and 3, so
-`SUPPORTED_SCHEMAS` is deliberately empty and a reader must pass the versions it accepts. See the
+**Status:** `0.2.0` — Phases 1–2 complete. The envelope, version negotiation and serialization core
+are implemented and tested; `model.identity`, `machine.profile`, `benchmark.result`,
+`benchmark.run_summary`, `capability.evidence` and `benchmark.evidence_bundle` are registered in
+`SUPPORTED_SCHEMAS`, but **draft**: Phase 4 may still reshape a field once FreeWeight has produced
+real results against these payloads. Event and error envelopes arrive in Phase 3. See the
 [development plan](docs/packages/setspec/development-plan.md) for what each phase adds.
 
 Part of the **Local AI Suite** — see [docs/architecture/executive-summary.md](docs/architecture/executive-summary.md)
@@ -61,6 +63,41 @@ assert received.extras == {"confidence": 0.87}
 A measurement this environment cannot provide is `UNSUPPORTED`, which serializes as the string
 `"unsupported"` — never `null`, never `0`
 ([ADR-0016](docs/adr/0016-unavailable-is-not-zero.md)).
+
+Phase 2's payload types live in their own versioned modules, not the top-level package, so that a
+future `benchmark.result 2.0` can coexist with `v1` rather than racing it for one name
+([ADR-0009 rule 6](docs/adr/0009-setspec-schema-strategy.md)):
+
+```python
+from setspec.capability.v1 import CapabilityEvidenceOut
+
+evidence = CapabilityEvidenceOut.model_validate(
+    {
+        "model": {
+            "provider_kind": "ollama",
+            "provider_model_name": "qwen3.5:9b-q8_0",
+            "artifact_digest": None,
+            "identity_confidence": "name_only",
+            "canonical_id": "ollama/qwen3.5:9b-q8_0@unknown",
+            "observed_at": "2026-08-20T09:00:00.000Z",
+        },
+        "runtime_profile_hash": "a" * 16,
+        "machine_fingerprint": "b" * 64,
+        "capability_id": "coding.python",  # unenumerated specialization of the known root "coding"
+        "score": 0.82,
+        "confidence": 0.71,
+        "sample_count": 40,
+        "excluded_count": 2,
+        "dispersion": 0.09,
+        "measured_at": "2026-08-20T00:00:00.000Z",
+        "computed_at": "2026-08-22T00:00:00.000Z",
+        "policy_version": "1.0",
+        "vocabulary_version": "1.0",
+        "environment": {"provider_kind": "ollama", "provider_version": "0.32.13"},
+    }
+)
+assert evidence.capability_id == "coding.python"
+```
 
 See [docs/packages/setspec/spec.md](docs/packages/setspec/spec.md) §7 for the full public API and
 §20 for the acceptance criteria.

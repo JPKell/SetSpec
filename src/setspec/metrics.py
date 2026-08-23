@@ -70,11 +70,25 @@ class Aggregation(StrEnum):
     STDDEV = "stddev"
     """Standard deviation of the supported samples, reported as the value in its own right."""
 
+    P50 = "p50"
+    """50th percentile — the same statistic as ``MEDIAN``, spelled the way a percentile family
+    (``p50``/``p95``/``p99``) is usually reported together; both members exist so a producer never
+    has to translate its own vocabulary to satisfy this one."""
+
     P95 = "p95"
     """95th percentile."""
 
     P99 = "p99"
     """99th percentile."""
+
+    RATIO = "ratio"
+    """A proportion in ``[0, 1]`` that is not a mean of pass/fail samples but a direct ratio —
+    e.g. a memory-overhead ratio computed from two other measurements."""
+
+    RAW = "raw"
+    """A single unaggregated reading, kept distinct from ``SINGLE``: ``SINGLE`` still promises a
+    real, comparable measurement of the metric's stated unit, while ``RAW`` marks a value passed
+    through without this build knowing whether it was ever meant to be aggregated at all."""
 
 
 class MetricValueFields(PayloadDefinition):

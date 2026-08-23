@@ -133,7 +133,16 @@ class SchemaVersion:
         return f"{self.major}.{self.minor}"
 
 
-SUPPORTED_SCHEMAS: Final[Mapping[str, Mapping[int, SchemaVersion]]] = MappingProxyType({})
+SUPPORTED_SCHEMAS: Final[Mapping[str, Mapping[int, SchemaVersion]]] = MappingProxyType(
+    {
+        "model.identity": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "machine.profile": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "benchmark.result": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "benchmark.run_summary": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "capability.evidence": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "benchmark.evidence_bundle": MappingProxyType({1: SchemaVersion(1, 0)}),
+    }
+)
 """Every payload type this build can read, as ``{schema name: {major: highest known minor}}``.
 
 Keyed by **major**, not by exact version, because the reader policy accepts any minor within a
@@ -142,11 +151,25 @@ would contradict that policy and would make every additive schema change a break
 consumer ([ADR-0009 rule 9](../../docs/adr/0009-setspec-schema-strategy.md)). The recorded minor is
 therefore documentation of what this build knows, never a ceiling on what it accepts.
 
-Empty at ``0.1.0``: this release ships the envelope, versioning and serialization machinery, and
-Phase 2 registers the first payload types against it. A :func:`load_envelope` call naming a schema
-that is not registered raises :class:`~setspec.errors.SchemaVersionUnsupported` with an empty
-``supported`` list, which reads as "this build publishes no version of that schema" — the honest
-answer, and the same one a consumer gets for a schema retired in a future major.
+**Draft status (as of `0.2.0`, Phase 2).** The six entries above are registered so FreeWeight has
+concrete, negotiable schemas to build against, but none is frozen: [development plan Phase 4]
+(../../docs/packages/setspec/development-plan.md) may still change a field's shape after
+FreeWeight has produced real results, and that change may need to happen at ``1.0`` rather than as
+a new major, because nothing has shipped against these schemas outside this repository yet. A
+reader pinning to exactly ``1.0`` today is pinning to a draft; the schema names and this fact are
+documented wherever each payload module defines its fields, not encoded into the version number
+itself — ``SchemaVersion`` has no "draft" concept, and adding one here would weaken the exact
+``MAJOR.MINOR`` contract every *frozen* schema relies on for every consumer that is not SetSpec's
+own Phase 4.
+
+Two payload types remain unregistered at `0.2.0`: ``event.envelope`` and ``error.envelope``
+arrive in Phase 3, and ``prompt.record``/``prompt.manifest`` in Phase 5. Naming them here before
+their fields exist would be the same guess Phase 2's own risk note warns against, one layer up.
+
+A :func:`load_envelope` call naming a schema that is not registered raises
+:class:`~setspec.errors.SchemaVersionUnsupported` with an empty ``supported`` list, which reads as
+"this build publishes no version of that schema" — the honest answer, and the same one a consumer
+gets for a schema retired in a future major.
 """
 
 

@@ -7,6 +7,69 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-08-23
+
+Phase 2 of the [development plan](docs/packages/setspec/development-plan.md): provisional
+benchmark and evidence payloads. FreeWeight now has concrete models to build against —
+`model.identity`, `machine.profile`, `benchmark.result`, `benchmark.run_summary`,
+`capability.evidence` and `benchmark.evidence_bundle` — all registered in `SUPPORTED_SCHEMAS` at
+`1.0` but explicitly **draft**: Phase 4 may still reshape a field once FreeWeight has produced real
+results against it, per this phase's own known risk (guessing the result shape before its producer
+exists).
+
+### Added
+- `setspec.model.v1`: `ModelIdentityOut`/`In`, the exchange form of `baseaicore.ModelIdentity` plus
+  a `ModelDescriptor` snapshot. `canonical_id` and `identity_confidence` are carried on the wire
+  but recomputed from the identity triple and checked on every construction — a producer that
+  materializes them inconsistently is rejected, not silently trusted.
+- `setspec.machine.v1`: `MachineProfileOut`/`In`, `GpuProfileFields`, `StorageDeviceFields` — a
+  field-for-field mirror of `baseaicore.MachineProfile`, including which fields are required
+  versus optional. `machine_fingerprint` is carried but deliberately **not** re-verified, matching
+  `MachineProfile`'s own documented reason: its inclusion policy may change after the profile was
+  written, and a historically valid profile must still reconstruct exactly as stored.
+- `setspec.benchmark.v1`: `BenchmarkResultOut`/`In` and `BenchmarkRunSummaryOut`/`In`, built from
+  [Machine Identity §6](docs/architecture/machine-identity-and-reproducibility.md)'s minimum
+  provenance set — the one place a result's required shape was already normative before any
+  FreeWeight code existed. `runtime_profile_hash` is recomputed from the embedded profile and
+  checked, the same reasoning as `canonical_id`. Every other hash-shaped field (`manifest_hash`,
+  `prompt_subset_hash`, `reproducibility_fingerprint`) is validated only as non-empty: this package
+  cannot yet compute FreeWeight's own hashes, and guessing a format risks rejecting the first real
+  result over a formatting nuance instead of the risk Phase 2's tests actually target.
+- `setspec.capability.v1`: `CapabilityEvidenceOut`/`In` and `EvidenceBundleOut`/`In`, reproducing
+  [ADR-0022 §1](docs/adr/0022-capability-evidence-record-contract.md)'s normative field table
+  verbatim. `measured_at` later than `computed_at` is rejected as incoherent — the schema-level
+  enforcement of ADR-0022 §2's rule that recomputing evidence must not make it look fresher.
+- `setspec.vocabulary`: `CAPABILITIES`, `CAPABILITY_VOCABULARY_VERSION` (`"1.0"`),
+  `validate_capability`, `is_known_capability`. A specialization validates against its **root**
+  rather than needing individual enumeration — `coding.rust` is accepted the moment `coding` is
+  known — and an unknown ID is accepted leniently only when the payload declares a newer *minor*
+  of the vocabulary's current major, never across a major.
+- `setspec.base`: `WireSequence`, an ordered-collection field type alongside `WireEnum`. Strict
+  mode validates the *input Python type*, and a bare `tuple[T, ...]` under `strict=True` accepts
+  only an actual `tuple` — never the `list` every JSON array deserializes to — so every
+  ordered-collection field in Phase 2 needed this to accept a real document at all.
+- `Aggregation` gains `P50`, `RATIO` and `RAW`, matching aggregation kinds FreeWeight's own data
+  model already names that Phase 1's set did not cover.
+
+### Changed
+- `PayloadDefinition` now sets `extra="allow"` itself, rather than leaving pydantic's default
+  (`extra="ignore"`). A definition nested inside another payload — `model: ModelIdentityFields`
+  inside `CapabilityEvidenceFields` — is typed as the bare definition, not a generated `Out`/`In`,
+  so its own default governs unknown-key handling regardless of which half of the *outer* pair is
+  in use; `ignore` would have silently dropped an unrecognized field from every nested object in
+  both directions, which is precisely the loss [ADR-0009 rule 4](docs/adr/0009-setspec-schema-strategy.md)
+  exists to prevent. This is additive for every Phase 1 payload, which had no nested fields to
+  expose the gap.
+
+### Fixed
+- A test fixture (`tests/unit/test_payloads_benchmark.py`) embedded one module-level dict by
+  reference into every result it built; a test that mutated its own copy was actually mutating the
+  shared fixture in place, corrupting every test built after it in file execution order. It passed
+  under Python 3.13 by luck of `pytest-randomly`'s seed and failed outright under 3.14, whose
+  ordering exposed it — the bug was reference aliasing, not a Python-version incompatibility.
+  Fixed by building the dict fresh on every call; verified stable across five randomized runs on
+  both interpreters.
+
 ## [0.1.0] — 2026-08-23
 
 Phase 1 of the [development plan](docs/packages/setspec/development-plan.md): the envelope,
