@@ -3,7 +3,7 @@
 All notable changes to `setspec` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/), pre-1.0 per
-`docs/standards/packaging-and-release-standards.md` §3.
+packaging and release standards §3.
 
 ## [Unreleased]
 
@@ -28,7 +28,7 @@ exists).
   `MachineProfile`'s own documented reason: its inclusion policy may change after the profile was
   written, and a historically valid profile must still reconstruct exactly as stored.
 - `setspec.benchmark.v1`: `BenchmarkResultOut`/`In` and `BenchmarkRunSummaryOut`/`In`, built from
-  [Machine Identity §6](docs/architecture/machine-identity-and-reproducibility.md)'s minimum
+  Machine Identity §6's minimum
   provenance set — the one place a result's required shape was already normative before any
   FreeWeight code existed. `runtime_profile_hash` is recomputed from the embedded profile and
   checked, the same reasoning as `canonical_id`. Every other hash-shaped field (`manifest_hash`,
@@ -36,9 +36,36 @@ exists).
   cannot yet compute FreeWeight's own hashes, and guessing a format risks rejecting the first real
   result over a formatting nuance instead of the risk Phase 2's tests actually target.
 - `setspec.capability.v1`: `CapabilityEvidenceOut`/`In` and `EvidenceBundleOut`/`In`, reproducing
-  [ADR-0022 §1](docs/adr/0022-capability-evidence-record-contract.md)'s normative field table
+  ADR-0022 §1's normative field table
   verbatim. `measured_at` later than `computed_at` is rejected as incoherent — the schema-level
   enforcement of ADR-0022 §2's rule that recomputing evidence must not make it look fresher.
+- `setspec.provenance`: `EnvironmentFields`, the provider/driver/OS block shared by
+  `benchmark.result`, `benchmark.run_summary` and `capability.evidence`. It gets a neutral home
+  for the same reason `setspec.metrics` has one: a sub-model used by two payload types belongs to
+  neither, and had it lived in `benchmark/v1.py`, the day `benchmark.result` needed a changed
+  environment shape whoever edited that class would silently have changed `capability.evidence`
+  v1 too — a frozen contract mutating because someone edited a different payload's module.
+- `setspec.envelope.DRAFT_SCHEMAS`: which registered schemas are still provisional. The
+  development plan asks for draft status to be visible *in the API*, not only in prose. It is a
+  separate set rather than a `"1.0-draft"` version string because the latter would have to be
+  parsed by `SchemaVersion`, whose contract is that a version is exactly two integers and
+  non-canonical spellings are refused — loosening that permanently, to describe a condition that
+  ends at Phase 4, would weaken the version format every frozen schema depends on. Freezing a
+  schema is one deletion from this set.
+- `benchmark.result` gains the provenance Machine Identity §6
+  calls "optional but strongly recommended, and required for any benchmark whose numbers depend on
+  them": `measurement_class` (cold/warm/cache_reused/n-a), `telemetry_summary` (peak VRAM,
+  peak/mean power, max temperature, throttle flag) and `raw_response_ref` — plus `error_code`,
+  `error_text`, `completed_cases` and `total_cases` from FreeWeight's own `run_tests` row. These
+  had to be declared rather than left out: the writer half of each pair forbids unknown keys, so a
+  field this schema does not name is one a producer *cannot emit at all*. A memory or energy
+  benchmark — whose numbers §6 says depend on telemetry — could not have exported a conformant
+  result, and a `failed` result had no field in which to say why it failed.
+- `RuntimeProfileFields.profile_hash`, a public property delegating to
+  `baseaicore.RuntimeProfile`. A consumer needs the hash for the same reason a producer does —
+  two results are comparable only if their profiles hash identically — and previously the only
+  way to it was a private helper reached across class boundaries behind two `noqa: SLF001`
+  waivers.
 - `setspec.vocabulary`: `CAPABILITIES`, `CAPABILITY_VOCABULARY_VERSION` (`"1.0"`),
   `validate_capability`, `is_known_capability`. A specialization validates against its **root**
   rather than needing individual enumeration — `coding.rust` is accepted the moment `coding` is
@@ -57,11 +84,18 @@ exists).
   inside `CapabilityEvidenceFields` — is typed as the bare definition, not a generated `Out`/`In`,
   so its own default governs unknown-key handling regardless of which half of the *outer* pair is
   in use; `ignore` would have silently dropped an unrecognized field from every nested object in
-  both directions, which is precisely the loss [ADR-0009 rule 4](docs/adr/0009-setspec-schema-strategy.md)
+  both directions, which is precisely the loss ADR-0009 rule 4
   exists to prevent. This is additive for every Phase 1 payload, which had no nested fields to
   expose the gap.
 
 ### Fixed
+- `completed_cases` greater than `total_cases` is now rejected, the same arithmetic honesty the
+  timestamp ordering checks already enforced: "12 of 10 cases done" is a producer bug, and a
+  consumer rendering it as a percentage would show one above 100%.
+- A garbled sentence in `setspec.machine.v1`'s module docstring, left by an edit, made the
+  explanation of why `machine_fingerprint` is *not* re-verified unreadable — the one place this
+  package carries a hash-shaped field without checking it, so the reason it is deliberate rather
+  than an oversight is exactly the thing that had to be legible.
 - A test fixture (`tests/unit/test_payloads_benchmark.py`) embedded one module-level dict by
   reference into every result it built; a test that mutated its own copy was actually mutating the
   shared fixture in place, corrupting every test built after it in file execution order. It passed
@@ -81,7 +115,7 @@ type is registered yet — Phase 2 adds the first ones against this machinery, w
 ### Added
 - `envelope`: `SchemaEnvelope`, `GeneratorInfo`, `SchemaVersion`, `SUPPORTED_SCHEMAS`,
   `load_envelope`, `dump_envelope`. The reader policy of
-  [ADR-0009 rule 3](docs/adr/0009-setspec-schema-strategy.md) is enforced in both directions: a
+  ADR-0009 rule 3 is enforced in both directions: a
   newer minor within a supported major is accepted with its unknown fields intact, an unsupported
   major is refused with `SchemaVersionUnsupported` naming the schema, the received version and
   every supported one — and is never partially parsed.
@@ -95,13 +129,13 @@ type is registered yet — Phase 2 adds the first ones against this machinery, w
   `MAX_PAYLOAD_DEPTH` (64); callers may pass tighter ones per call.
 - `base`: `PayloadDefinition`, `StrictPayload`, `PreservingPayload` and `payload_models`, which
   generates the `Out`/`In` pair required by
-  [ADR-0009 rule 4](docs/adr/0009-setspec-schema-strategy.md) from one definition — so a writer
+  ADR-0009 rule 4 from one definition — so a writer
   cannot emit a field it does not know and a reader cannot strip one. The round-trip contract is
   asserted per class, never across the pair.
 - `base`: `WireEnum`, for enum fields that must accept their own string values from a parsed
   document while the bases otherwise validate strictly.
 - `metrics`: `MetricValueOut`/`MetricValueIn` and `Aggregation`. The
-  [ADR-0016 §6](docs/adr/0016-unavailable-is-not-zero.md) invariants are structural rather than
+  ADR-0016 §6 invariants are structural rather than
   advisory: a real value must report at least one supported sample, an unsupported value must
   report none, and dispersion needs at least two — so `value=0.0, sample_count=0` cannot be
   serialized at all.

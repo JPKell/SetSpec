@@ -363,3 +363,49 @@ class TestEvidenceBundle:
             }
         )
         assert bundle.evidence[0].extras == {"future_field": "x"}
+
+
+class TestSharedEnvironmentBlock:
+    """`environment` is one shared definition, not two that happen to agree today.
+
+    ADR-0022 §1 puts `environment` on `capability.evidence`; Machine Identity §4 and §6 put the
+    same facts on a benchmark result. If each module defined its own copy, the two could drift
+    apart field by field while every test in both files kept passing — the exact failure the
+    audit behind ADR-0022 found between FreeWeight and LoadCoach on paper.
+    """
+
+    def test_both_payloads_use_the_same_definition_object(self) -> None:
+        from setspec.benchmark.v1 import BenchmarkResultFields
+        from setspec.provenance import EnvironmentFields
+
+        assert CapabilityEvidenceOut.model_fields["environment"].annotation is EnvironmentFields
+        assert BenchmarkResultFields.model_fields["environment"].annotation is EnvironmentFields
+
+    def test_the_shared_block_lives_outside_both_versioned_modules(self) -> None:
+        """Its home is neutral, so changing it is an obviously cross-cutting act."""
+        from setspec.provenance import EnvironmentFields
+
+        assert EnvironmentFields.__module__ == "setspec.provenance"
+
+    def test_drift_signals_are_optional_but_the_provider_is_not(self) -> None:
+        """A driver version may be absent; which provider produced the numbers may not be."""
+        evidence = CapabilityEvidenceOut.model_validate(_evidence())
+        assert evidence.environment.gpu_driver_version is None
+        with pytest.raises(PydanticValidationError, match="provider_version"):
+            CapabilityEvidenceOut.model_validate(_evidence(environment={"provider_kind": "ollama"}))
+
+    def test_a_fully_populated_environment_round_trips(self) -> None:
+        evidence = CapabilityEvidenceOut.model_validate(
+            _evidence(
+                environment={
+                    "provider_kind": "ollama",
+                    "provider_version": "0.32.13",
+                    "gpu_driver_version": "580.65.06",
+                    "cuda_version": "13.0",
+                    "os_version": "Ubuntu 26.04 LTS",
+                }
+            )
+        )
+        assert (
+            CapabilityEvidenceOut.model_validate(json.loads(canonical_dumps(evidence))) == evidence
+        )

@@ -6,7 +6,7 @@ this model's job is to make the producer state what it did rather than hand over
 (spec §3, non-goals).
 
 The invariants below are the schema-level half of
-[ADR-0016 §6](../../docs/adr/0016-unavailable-is-not-zero.md). That ADR requires unsupported
+ADR-0016 §6. That ADR requires unsupported
 samples to be *excluded* from a statistic and the surviving sample count to be reported next to it;
 a model that let a caller write ``value=0.0, sample_count=0`` would make the rule advisory. Here it
 is structural — the two fields cannot disagree, so a metric that was never measured cannot be
@@ -100,7 +100,7 @@ class MetricValueFields(PayloadDefinition):
     Attributes:
         value: The measurement, or ``UNSUPPORTED`` when this environment could not provide one.
             Never ``null`` and never ``0`` as a stand-in for absence
-            ([ADR-0016 §4](../../docs/adr/0016-unavailable-is-not-zero.md)).
+            (ADR-0016 §4).
         unit: The unit the value is in — ``"ms"``, ``"tokens_per_second"``, ``"bytes"``,
             ``"ratio"``. Required and non-empty: a number whose unit lives only in a field name
             somewhere upstream is a number that will eventually be compared against a different

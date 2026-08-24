@@ -1,7 +1,7 @@
 """Shared fixtures: a frozen clock, a canonical test generator, and a socket guard.
 
 Determinism is a testing standard, not a preference
-(``docs/standards/testing-standards.md`` §4). Two rules bite in this package specifically:
+(testing standards §4). Two rules bite in this package specifically:
 
 * **No test reads the wall clock.** Every timestamp comes from :func:`frozen_clock` or
   :func:`fixed_now`, so a canonical-output assertion compares bytes rather than hoping two calls

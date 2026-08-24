@@ -5,7 +5,7 @@ three places where a Python value and its JSON form disagree, and it resolves ea
 once so that no payload model has to:
 
 * a measurement that does not exist here is the string ``"unsupported"``, never ``null``, never
-  ``0`` ([ADR-0016 §4](../../docs/adr/0016-unavailable-is-not-zero.md));
+  ``0`` (ADR-0016 §4);
 * a timestamp is RFC 3339 UTC at millisecond precision, never naive
   ([spec §11.6](../../docs/packages/setspec/spec.md));
 * byte-identical output for equal input, which is what makes a hash of a payload comparable across
@@ -78,7 +78,7 @@ MAX_PAYLOAD_BYTES: Final[int] = 16 * 1024 * 1024
 """Largest single document accepted from untrusted JSON, in bytes of UTF-8.
 
 Matches the prompt-bearing request body limit in
-[API Standards §10](../../docs/standards/api-and-contract-standards.md), so a payload that a suite
+API Standards §10, so a payload that a suite
 API would accept is one this parser will also accept. Large exports are not meant to arrive as one
 document: they are JSONL with one envelope per line (spec §15), which keeps both the parser and
 the consumer's memory bounded regardless of how many results the file holds.

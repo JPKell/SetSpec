@@ -16,7 +16,7 @@ vocabulary. Anything not listed in ``__all__`` is private and may change without
 ``benchmark.evidence_bundle`` (Phase 2) live in their own versioned modules —
 ``setspec.model.v1``, ``setspec.machine.v1``, ``setspec.benchmark.v1``, ``setspec.capability.v1`` —
 and are imported from there, e.g. ``from setspec.capability.v1 import CapabilityEvidenceOut``.
-This is not an oversight: [ADR-0009 rule 6](../../docs/adr/0009-setspec-schema-strategy.md)
+This is not an oversight: ADR-0009 rule 6
 requires a v1 payload to remain importable as ``setspec.benchmark.v1`` for a deprecation window
 after ``benchmark.result 2.0`` ships, which only works if ``v1`` and ``v2`` are different modules
 rather than two classes racing for one flat name. ``MetricValue`` and the vocabulary helpers below
@@ -35,7 +35,7 @@ helpers above them.
 
 The two halves of every payload type are the design, not an accident: a writer uses the ``Out``
 class and may emit only fields it knows; a reader uses the ``In`` class and keeps fields it does
-not ([ADR-0009 rule 4](../../docs/adr/0009-setspec-schema-strategy.md)). That is what lets a v1.0
+not (ADR-0009 rule 4). That is what lets a v1.0
 reader carry a v1.1 document through a re-export without destroying the parts it cannot interpret.
 """
 
@@ -50,6 +50,7 @@ from setspec.base import (
     payload_models,
 )
 from setspec.envelope import (
+    DRAFT_SCHEMAS,
     SUPPORTED_SCHEMAS,
     GeneratorInfo,
     SchemaEnvelope,
@@ -78,6 +79,7 @@ from setspec.vocabulary import (
 __all__ = [
     "CAPABILITIES",
     "CAPABILITY_VOCABULARY_VERSION",
+    "DRAFT_SCHEMAS",
     "MAX_PAYLOAD_BYTES",
     "MAX_PAYLOAD_DEPTH",
     "SUPPORTED_SCHEMAS",

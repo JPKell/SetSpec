@@ -9,10 +9,10 @@ measurement subject, metrics plus provenance plus a samples reference;
 by [development plan Phase 2](../../../docs/packages/setspec/development-plan.md) is guessing the
 result shape before FreeWeight exists to produce one; this module is built from the one place that
 shape is already normative before any FreeWeight code exists —
-[Machine Identity §6](../../../docs/architecture/machine-identity-and-reproducibility.md), "what
+Machine Identity §6, "what
 every measured result must carry" — plus
-[ADR-0022](../../../docs/adr/0022-capability-evidence-record-contract.md) and
-[ADR-0023](../../../docs/adr/0023-runtime-profile-resolution.md) for the fields those provenance
+ADR-0022 and
+ADR-0023 for the fields those provenance
 bullets expand into. A field with no normative source here is a field this module does
 not invent; Phase 4 corrects any gap against FreeWeight's real output.
 
@@ -32,14 +32,15 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any, Self
 
-from baseaicore import ProviderKind, RuntimeProfile
+from baseaicore import UNSUPPORTED, RuntimeProfile
 from pydantic import Field, model_validator
 
 from setspec.base import PayloadDefinition, WireEnum, WireSequence, payload_models
 from setspec.machine.v1 import MachineProfileFields
 from setspec.metrics import MetricValueFields
 from setspec.model.v1 import ModelIdentityFields
-from setspec.serialization import TimestampField
+from setspec.provenance import EnvironmentFields
+from setspec.serialization import MeasurementField, TimestampField
 
 __all__ = [
     "ApplicationProvenanceFields",
@@ -51,13 +52,14 @@ __all__ = [
     "BenchmarkRunSummaryIn",
     "BenchmarkRunSummaryOut",
     "BenchmarkSuiteProvenanceFields",
-    "EnvironmentFields",
     "ExecutionProvenanceFields",
+    "MeasurementClass",
     "PromptUsageFields",
     "ReproducibilityFingerprintFields",
     "RunStatus",
     "RuntimeProfileFields",
     "ServedContextSource",
+    "TelemetrySummaryFields",
 ]
 
 
@@ -66,7 +68,7 @@ class RuntimeProfileFields(PayloadDefinition):
 
     Mirrors :class:`baseaicore.RuntimeProfile` field for field, including that every field is
     optional: a profile with everything unset means "provider defaults" and is itself a legal,
-    hashable profile ([ADR-0023](../../../docs/adr/0023-runtime-profile-resolution.md) §1).
+    hashable profile (ADR-0023 §1).
 
     Attributes:
         context_size: Requested context window, in tokens.
@@ -88,8 +90,22 @@ class RuntimeProfileFields(PayloadDefinition):
     keep_alive: str | None = None
     provider_options: dict[str, Any] = Field(default_factory=dict)
 
-    def _rebuilt(self) -> RuntimeProfile:
-        """Reconstruct the equivalent :class:`baseaicore.RuntimeProfile`, to read its hash."""
+    @property
+    def profile_hash(self) -> str:
+        """Return this profile's 16-character hash, computed by the domain type that defines it.
+
+        Public because a consumer needs it for the same reason a producer does: two results are
+        comparable only if their profiles hash identically
+        (ADR-0023), and a reader holding a
+        payload should not have to reconstruct a :class:`baseaicore.RuntimeProfile` by hand to
+        find that out. Delegating rather than reimplementing is the point — a second
+        implementation of this hash would eventually disagree with the first, and the whole value
+        of the hash is that it does not.
+
+        Returns:
+            16 lowercase hex characters, identical to what
+            :attr:`baseaicore.RuntimeProfile.profile_hash` computes for the same field values.
+        """
         return RuntimeProfile(
             context_size=self.context_size,
             kv_cache_precision=self.kv_cache_precision,
@@ -99,31 +115,7 @@ class RuntimeProfileFields(PayloadDefinition):
             batch_size=self.batch_size,
             keep_alive=self.keep_alive,
             provider_options=dict(self.provider_options),
-        )
-
-
-class EnvironmentFields(PayloadDefinition):
-    """Provider and drift-sensitive environment facts at the moment of measurement.
-
-    Unifies two bullets that Machine Identity §6 and ADR-0022 describe separately but with
-    identical content — "provider kind + provider version" and "GPU driver, CUDA, OS version at
-    measurement" — into the one nested object ADR-0022 §1 already uses for
-    ``capability.evidence.environment``, so a benchmark result and the evidence aggregated from it
-    carry environment facts in the same shape.
-
-    Attributes:
-        provider_kind: Which kind of provider served the model for this measurement.
-        provider_version: The provider's own version string, e.g. ``"0.32.13"``.
-        gpu_driver_version: A drift signal, not identity; ``None`` when no GPU was involved.
-        cuda_version: A drift signal, not identity.
-        os_version: A drift signal, not identity.
-    """
-
-    provider_kind: WireEnum[ProviderKind]
-    provider_version: str = Field(min_length=1)
-    gpu_driver_version: str | None = None
-    cuda_version: str | None = None
-    os_version: str | None = None
+        ).profile_hash
 
 
 class ApplicationProvenanceFields(PayloadDefinition):
@@ -165,7 +157,7 @@ class BenchmarkSuiteProvenanceFields(PayloadDefinition):
 
     A differing ``suite_version``, ``dataset_hashes`` entry or ``prompt_subset_hash`` is a hard
     separation for confidence purposes, never a discount
-    ([ADR-0017](../../../docs/adr/0017-benchmark-confidence-and-freshness.md)) — SetSpec carries
+    (ADR-0017) — SetSpec carries
     these values; the separation itself is LoadCoach's and FreeWeight's behaviour to apply.
 
     Attributes:
@@ -179,7 +171,7 @@ class BenchmarkSuiteProvenanceFields(PayloadDefinition):
             none.
         prompt_subset_hash: Hash of only the prompts *this suite* declares — the fingerprint
             input, per benchmark and not per pack
-            ([ADR-0028](../../../docs/adr/0028-prompt-pack-granularity.md)).
+            (ADR-0028).
         prompts_used: Every prompt named by ``prompt_subset_hash``, individually identified.
     """
 
@@ -198,7 +190,7 @@ class ServedContextSource(StrEnum):
 
     Distinct from :attr:`~setspec.model.v1.ModelIdentityFields.max_context`, which is what the
     model *advertises*, not what a provider was actually configured to serve
-    ([ADR-0023](../../../docs/adr/0023-runtime-profile-resolution.md) §4).
+    (ADR-0023 §4).
     """
 
     CONFIGURED = "configured"
@@ -224,7 +216,7 @@ class ExecutionProvenanceFields(PayloadDefinition):
         served_context_source: Where that value came from.
         gpu_index: The device this result's metrics are attributed to.
         multi_gpu_visible: Whether more than one GPU was visible during measurement
-            ([ADR-0027](../../../docs/adr/0027-multi-gpu-semantics.md)).
+            (ADR-0027).
     """
 
     effective_parameters: dict[str, Any] = Field(default_factory=dict)
@@ -257,7 +249,7 @@ class ExecutionProvenanceFields(PayloadDefinition):
 class ReproducibilityFingerprintFields(PayloadDefinition):
     """The answer to "could this measurement be repeated, and is that other result the same
     thing?"
-    ([Machine Identity §4](../../../docs/architecture/machine-identity-and-reproducibility.md)).
+    (Machine Identity §4).
 
     Attributes:
         reproducibility_fingerprint: The hash itself, as the producer computed it.
@@ -271,6 +263,64 @@ class ReproducibilityFingerprintFields(PayloadDefinition):
 
     reproducibility_fingerprint: str = Field(min_length=1)
     fingerprint_document: dict[str, Any]
+
+
+class MeasurementClass(StrEnum):
+    """Whether the model was cold, warm, or serving a reused cache when this was measured.
+
+    The cold/warm marker
+    Machine Identity §6
+    calls "optional but strongly recommended". For a load-time or first-token metric it is not
+    optional in practice: the same benchmark against the same weights reports figures that differ
+    by an order of magnitude depending on this value alone, so a result that omits it is a number
+    two readers will interpret differently.
+    """
+
+    COLD = "cold"
+    """Measured on a fresh load, with nothing cached."""
+
+    WARM = "warm"
+    """Measured with the model already resident."""
+
+    CACHE_REUSED = "cache_reused"
+    """Measured while a prompt or KV cache from an earlier request was still in play."""
+
+    NOT_APPLICABLE = "n/a"
+    """The distinction does not apply to what this benchmark measures."""
+
+
+class TelemetrySummaryFields(PayloadDefinition):
+    """What the machine was doing while this benchmark ran, reduced to the figures that explain it.
+
+    The telemetry summary
+    Machine Identity §6
+    names as "required for any benchmark whose numbers depend on them" — a memory or energy
+    benchmark's result is not interpretable without it, and a throttled run's timings mean
+    something different from an unthrottled one's.
+
+    Every figure is device-scoped by the enclosing result's ``execution.gpu_index``, never
+    machine-wide: there is no meaningful sum of two GPUs' VRAM or power, and
+    ADR-0027 requires each derived figure to name
+    the device it came from rather than silently aggregating across a machine the reference
+    hardware does not have.
+
+    Attributes:
+        peak_vram_bytes: Highest device memory in use during the benchmark.
+        peak_power_watts: Highest instantaneous draw observed.
+        mean_power_watts: Mean draw across the benchmark — the figure an energy estimate derives
+            from, and never interchangeable with the peak.
+        max_temperature_c: Highest device temperature observed.
+        throttled: Whether the device throttled at any point. ``None`` when the driver exposes no
+            throttle-reason mask to read, which is a different statement from ``False``: guessing
+            "not throttled" would attribute a slow result to the model rather than to the hardware
+            protecting itself.
+    """
+
+    peak_vram_bytes: MeasurementField = UNSUPPORTED
+    peak_power_watts: MeasurementField = UNSUPPORTED
+    mean_power_watts: MeasurementField = UNSUPPORTED
+    max_temperature_c: MeasurementField = UNSUPPORTED
+    throttled: bool | None = None
 
 
 class BenchmarkResultStatus(StrEnum):
@@ -309,10 +359,28 @@ class BenchmarkResultFields(PayloadDefinition):
         completed_at: When measurement ended; never earlier than ``started_at``.
         status: This benchmark's terminal state.
         skip_reason: Present iff ``status`` is ``skipped``.
+        error_code: A stable, machine-readable reason this benchmark did not complete. Optional
+            because not every non-completion has one — a cancelled benchmark was simply stopped —
+            but a ``failed`` result that omits it is a failure nobody can triage.
+        error_text: Human-readable detail alongside ``error_code``.
+        completed_cases: How many of this benchmark's cases finished.
+        total_cases: How many cases this benchmark set out to run. Never smaller than
+            ``completed_cases`` — see :meth:`_check_case_counts`.
+        measurement_class: Whether this was measured cold, warm, or against a reused cache.
+        telemetry_summary: What the hardware was doing while this ran.
+        raw_response_ref: An opaque, producer-local pointer to the stored raw provider response.
         metrics: Every metric this benchmark measured. Empty for a skipped or cancelled result;
             a completed result with none is rejected — see :meth:`_check_status_coherence`.
         samples_ref: An opaque, producer-local pointer to the raw sample rows behind ``metrics``.
             Never resolved by a consumer; carried only for the producer's own drill-down.
+
+    The last six are the provenance
+    Machine Identity §6
+    calls "optional but strongly recommended, and required for any benchmark whose numbers depend
+    on them", plus the two error fields FreeWeight's own ``run_tests`` row carries. They are
+    declared rather than left out because the writer half of this pair forbids unknown keys: a
+    field this schema does not name is a field a producer *cannot emit at all*, so omitting an
+    optional field is not a neutral act here — it is a decision that the field may never be sent.
     """
 
     model: ModelIdentityFields
@@ -329,6 +397,13 @@ class BenchmarkResultFields(PayloadDefinition):
     completed_at: TimestampField
     status: WireEnum[BenchmarkResultStatus]
     skip_reason: str | None = None
+    error_code: str | None = None
+    error_text: str | None = None
+    completed_cases: int | None = Field(default=None, ge=0)
+    total_cases: int | None = Field(default=None, ge=0)
+    measurement_class: WireEnum[MeasurementClass] | None = None
+    telemetry_summary: TelemetrySummaryFields | None = None
+    raw_response_ref: str | None = None
     metrics: WireSequence[MetricValueFields] = ()
     samples_ref: str | None = None
 
@@ -343,7 +418,7 @@ class BenchmarkResultFields(PayloadDefinition):
         Raises:
             ValueError: If the declared hash does not match what ``runtime_profile`` recomputes.
         """
-        recomputed = self.runtime_profile._rebuilt().profile_hash  # noqa: SLF001 — same module
+        recomputed = self.runtime_profile.profile_hash
         if recomputed != self.runtime_profile_hash:
             raise ValueError(
                 f"runtime_profile_hash {self.runtime_profile_hash!r} does not match "
@@ -364,6 +439,29 @@ class BenchmarkResultFields(PayloadDefinition):
             raise ValueError(
                 f"completed_at ({self.completed_at.isoformat()}) precedes started_at "
                 f"({self.started_at.isoformat()}); a benchmark cannot finish before it started."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _check_case_counts(self) -> Self:
+        """Require ``completed_cases`` not to exceed ``total_cases`` when both are present.
+
+        The same arithmetic honesty :meth:`_check_timing_order` applies to timestamps: "12 of 10
+        cases done" is not a progress report, it is a producer bug, and a consumer rendering it as
+        a percentage would show something above 100%.
+
+        Raises:
+            ValueError: If both counts are present and ``completed_cases`` exceeds
+                ``total_cases``.
+        """
+        if (
+            self.completed_cases is not None
+            and self.total_cases is not None
+            and self.completed_cases > self.total_cases
+        ):
+            raise ValueError(
+                f"completed_cases ({self.completed_cases}) exceeds total_cases "
+                f"({self.total_cases}); a benchmark cannot complete more cases than it ran."
             )
         return self
 
@@ -465,7 +563,7 @@ class BenchmarkRunSummaryFields(PayloadDefinition):
         Raises:
             ValueError: If the declared hash does not match what ``runtime_profile`` recomputes.
         """
-        recomputed = self.runtime_profile._rebuilt().profile_hash  # noqa: SLF001 — same module
+        recomputed = self.runtime_profile.profile_hash
         if recomputed != self.runtime_profile_hash:
             raise ValueError(
                 f"runtime_profile_hash {self.runtime_profile_hash!r} does not match "

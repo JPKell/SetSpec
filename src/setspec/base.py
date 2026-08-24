@@ -2,7 +2,7 @@
 
 Imports pydantic; performs no I/O and reads no clock.
 
-[ADR-0009 rule 4](../../docs/adr/0009-setspec-schema-strategy.md) requires every payload type to
+ADR-0009 rule 4 requires every payload type to
 exist as **two** classes generated from one definition, and the reason is a specific failure this
 suite refuses to ship:
 
@@ -107,7 +107,7 @@ class StrictPayload(PayloadDefinition):
     Refuses unknown keys. A writer that hands this model a field the schema does not define has
     either misspelled a name or is emitting a version it has not declared, and both are defects
     worth failing on at the point of construction rather than discovering in an export months
-    later ([ADR-0009 rule 5](../../docs/adr/0009-setspec-schema-strategy.md)).
+    later (ADR-0009 rule 5).
 
     Invariants:
         * Immutable after construction (``frozen``), so a serialized document always matches the
@@ -129,7 +129,7 @@ class PreservingPayload(PayloadDefinition):
     Keeps unknown keys instead of dropping them, and re-emits them on dump. This is what makes a
     v1.0 reader safe to put in front of a v1.1 document: it validates the fields it knows, carries
     the ones it does not, and a re-export loses nothing
-    ([ADR-0009 rule 4](../../docs/adr/0009-setspec-schema-strategy.md)).
+    (ADR-0009 rule 4).
 
     The relaxation is bounded and deliberate. ``extra="allow"`` weakens strictness on input, which
     is the documented cost of preservation across a version gap; every *known* field is still

@@ -20,6 +20,7 @@ from setspec.benchmark.v1 import (
     BenchmarkResultIn,
     BenchmarkResultOut,
     BenchmarkRunSummaryOut,
+    RuntimeProfileFields,
 )
 
 _STARTED_AT = datetime(2026, 8, 22, 9, 14, 0, tzinfo=UTC)
@@ -345,3 +346,134 @@ class TestBenchmarkRunSummary:
             )
         )
         assert summary.error_code == "PROVIDER_UNAVAILABLE"
+
+
+class TestRecommendedProvenance:
+    """Machine Identity §6's "optional but strongly recommended" set, plus the run_tests errors.
+
+    The writer half forbids unknown keys, so an optional field this schema does not declare is one
+    a producer can never send. These tests pin down that each is actually reachable — the gap they
+    close was silent, because a model with the field missing passes every test that never tries to
+    set it.
+    """
+
+    def test_a_cold_warm_marker_is_emittable(self) -> None:
+        result = BenchmarkResultOut.model_validate(_result(measurement_class="cold"))
+        assert result.measurement_class is not None
+        assert result.measurement_class.value == "cold"
+
+    @pytest.mark.parametrize("value", ["cold", "warm", "cache_reused", "n/a"])
+    def test_every_measurement_class_is_accepted(self, value: str) -> None:
+        result = BenchmarkResultOut.model_validate(_result(measurement_class=value))
+        assert result.measurement_class is not None
+
+    def test_an_unknown_measurement_class_is_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            BenchmarkResultOut.model_validate(_result(measurement_class="lukewarm"))
+
+    def test_a_telemetry_summary_is_emittable(self) -> None:
+        result = BenchmarkResultOut.model_validate(
+            _result(
+                telemetry_summary={
+                    "peak_vram_bytes": 15_000_000_000,
+                    "peak_power_watts": 178.5,
+                    "mean_power_watts": 141.2,
+                    "max_temperature_c": 71,
+                    "throttled": False,
+                }
+            )
+        )
+        assert result.telemetry_summary is not None
+        assert result.telemetry_summary.peak_vram_bytes == 15_000_000_000
+
+    def test_telemetry_figures_default_to_unsupported_not_zero(self) -> None:
+        """A sensor that could not be read is not a reading of zero watts (ADR-0016)."""
+        result = BenchmarkResultOut.model_validate(_result(telemetry_summary={}))
+        assert result.telemetry_summary is not None
+        dumped = result.model_dump()["telemetry_summary"]
+        assert dumped["peak_power_watts"] == "unsupported"
+        assert dumped["max_temperature_c"] == "unsupported"
+
+    def test_an_unreadable_throttle_flag_is_none_not_false(self) -> None:
+        """`None` and `False` are different claims; guessing False blames the model, not the GPU."""
+        result = BenchmarkResultOut.model_validate(_result(telemetry_summary={}))
+        assert result.telemetry_summary is not None
+        assert result.telemetry_summary.throttled is None
+
+    def test_a_raw_response_reference_is_emittable(self) -> None:
+        result = BenchmarkResultOut.model_validate(_result(raw_response_ref="artifact_01J9K2M"))
+        assert result.raw_response_ref == "artifact_01J9K2M"
+
+    def test_a_failed_result_can_say_why(self) -> None:
+        result = BenchmarkResultOut.model_validate(
+            _result(
+                status="failed",
+                metrics=[],
+                error_code="PROVIDER_TIMEOUT",
+                error_text="no response after 30s",
+            )
+        )
+        assert result.error_code == "PROVIDER_TIMEOUT"
+
+    def test_case_counts_are_emittable(self) -> None:
+        result = BenchmarkResultOut.model_validate(_result(completed_cases=8, total_cases=10))
+        assert (result.completed_cases, result.total_cases) == (8, 10)
+
+    def test_completing_more_cases_than_were_run_is_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError, match="completed_cases"):
+            BenchmarkResultOut.model_validate(_result(completed_cases=11, total_cases=10))
+
+    def test_equal_case_counts_are_valid(self) -> None:
+        result = BenchmarkResultOut.model_validate(_result(completed_cases=10, total_cases=10))
+        assert result.completed_cases == 10
+
+    def test_a_negative_case_count_is_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            BenchmarkResultOut.model_validate(_result(completed_cases=-1))
+
+    def test_one_case_count_alone_is_allowed(self) -> None:
+        """The pair is only cross-checked when both are present; neither implies the other."""
+        assert BenchmarkResultOut.model_validate(_result(total_cases=10)).completed_cases is None
+
+    def test_all_recommended_fields_default_to_absent(self) -> None:
+        """They are optional: a benchmark whose numbers do not depend on them omits them."""
+        result = BenchmarkResultOut.model_validate(_result())
+        assert result.measurement_class is None
+        assert result.telemetry_summary is None
+        assert result.raw_response_ref is None
+        assert result.error_code is None
+
+    def test_a_fully_populated_result_round_trips(self) -> None:
+        """The dev plan asks for an all-populated variant, not only the minimal one."""
+        result = BenchmarkResultOut.model_validate(
+            _result(
+                measurement_class="warm",
+                telemetry_summary={
+                    "peak_vram_bytes": 15_000_000_000,
+                    "peak_power_watts": 178.5,
+                    "mean_power_watts": 141.2,
+                    "max_temperature_c": 71,
+                    "throttled": True,
+                },
+                raw_response_ref="artifact_01J9K2M",
+                completed_cases=10,
+                total_cases=10,
+            )
+        )
+        assert BenchmarkResultOut.model_validate(json.loads(canonical_dumps(result))) == result
+
+
+class TestRuntimeProfileHashProperty:
+    """The hash is delegated to the domain type, never reimplemented here."""
+
+    def test_it_matches_the_domain_types_own_hash(self) -> None:
+        fields = RuntimeProfileFields.model_validate(_runtime_profile())
+        assert fields.profile_hash == _RUNTIME_PROFILE_HASH
+
+    def test_an_all_default_profile_still_hashes(self) -> None:
+        """ "Provider defaults" is a legal, hashable profile, not a "no profile" state."""
+        assert len(RuntimeProfileFields().profile_hash) == 16
+
+    def test_a_changed_field_changes_the_hash(self) -> None:
+        baseline = RuntimeProfileFields(context_size=8192)
+        assert baseline.profile_hash != RuntimeProfileFields(context_size=4096).profile_hash

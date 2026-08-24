@@ -8,13 +8,16 @@ the identical payload whether it went through this schema or was read straight f
 
 **Status: draft (`1.0`).** See :mod:`setspec.model.v1` for what that means and why.
 
-**Deliberately not re-verified:** ``machine_fingerprint``. Unlike ``model.identity``'s
-``canonical_id`` (a pure function of its triple, recomputed and checked below is a lie — see
-:mod:`setspec.model.v1`), :class:`baseaicore.MachineProfile` documents that its fingerprint is
+**Deliberately not re-verified:** ``machine_fingerprint``. This is the one place a hash-shaped
+field is carried without being recomputed and checked, and the asymmetry with
+:mod:`setspec.model.v1` — which does recompute ``canonical_id`` — is the domain type's own
+choice, not an oversight here. :class:`baseaicore.MachineProfile` documents its fingerprint as
 "the *recorded* fingerprint, not a derived property... neither computed nor re-verified", because
-the inclusion policy computing it may change after the profile was written while old profiles must
-still reconstruct exactly as stored. Recomputing it here would silently reject a historically valid
-profile the day that policy changes. This schema follows the domain type's own choice.
+the policy deciding which fields feed the fingerprint may change after a profile was written,
+while a profile read back years later must still reconstruct exactly as stored. A ``canonical_id``
+has no such caveat: it is a pure function of the identity triple under a format ADR-0024 fixes.
+Recomputing a fingerprint here would therefore reject a historically valid profile the day that
+policy changes, which is why this schema follows the domain type rather than its own sibling.
 """
 
 from __future__ import annotations
@@ -38,14 +41,14 @@ class GpuProfileFields(PayloadDefinition):
     """Static identity of one GPU, as a collector reported it.
 
     Nested only — ``gpu.profile`` is not independently enveloped
-    ([ADR-0009](../../../docs/adr/0009-setspec-schema-strategy.md) lists no such schema), so this
+    (ADR-0009 lists no such schema), so this
     is a plain :class:`~setspec.base.PayloadDefinition` rather than a generated pair; see that
     class's docstring for why an embedded definition is always preserving.
 
     Attributes:
         index: The device's 0-based enumeration position; also the value a benchmark result
             attributes a per-device measurement to
-            ([ADR-0027](../../../docs/adr/0027-multi-gpu-semantics.md)).
+            (ADR-0027).
         name: The marketing name, e.g. ``"NVIDIA GeForce RTX 5060 Ti"``.
         uuid: The device's stable hardware identifier, unchanged across reboots. ``None`` when the
             collector could not read one.
@@ -101,7 +104,7 @@ class MachineProfileFields(PayloadDefinition):
         logical_cores: Logical core count, hyperthreads included.
         ram_bytes: Total system memory.
         gpus: Every visible GPU. Never summed or averaged by any consumer
-            ([ADR-0027](../../../docs/adr/0027-multi-gpu-semantics.md)).
+            (ADR-0027).
         storage: Attached storage devices. Provenance only; excluded from the fingerprint.
         python_version: The interpreter that produced the measurement — application environment,
             not machine identity.

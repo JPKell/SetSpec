@@ -3,7 +3,7 @@
 Imports pydantic and :mod:`baseaicore`; performs no I/O. Exchange form of
 :class:`baseaicore.ModelIdentity` (the identity triple) and :class:`baseaicore.ModelDescriptor`
 (the refreshable metadata a provider reports about those weights), combined into one payload
-because [ADR-0022 §1](../../../docs/adr/0022-capability-evidence-record-contract.md) always
+because ADR-0022 §1 always
 carries them together as ``capability.evidence.model``.
 
 **Status: draft (`1.0`).** Registered in :data:`setspec.envelope.SUPPORTED_SCHEMAS` so FreeWeight
@@ -56,7 +56,7 @@ class ModelIdentityFields(PayloadDefinition):
 
     Attributes:
         provider_kind: Which kind of provider serves these weights ([ADR-0008]
-            (../../../docs/adr/0008-canonical-model-identity.md)). Reuses
+            (0008 canonical model identity)). Reuses
             :class:`baseaicore.ProviderKind` directly rather than a shadow enum, so a new provider
             kind reaches this schema the moment BaseAiCore adds it.
         provider_model_name: Exactly as the provider names it, case and punctuation preserved.
@@ -65,7 +65,7 @@ class ModelIdentityFields(PayloadDefinition):
         identity_confidence: ``digest`` iff ``artifact_digest`` is present, ``name_only``
             otherwise — checked, not merely documented.
         canonical_id: ``{provider_kind}/{provider_model_name}@{digest_short}``
-            ([ADR-0024](../../../docs/adr/0024-canonical-id-and-model-references.md)). Lossy and
+            (ADR-0024). Lossy and
             display-only; never parsed back into its parts.
         observed_at: When this descriptor snapshot was read from the provider.
         family: The model family name, e.g. ``"qwen3.5"``.
@@ -79,7 +79,7 @@ class ModelIdentityFields(PayloadDefinition):
         size_bytes: On-disk size of the weights.
         max_context: The context length the model *advertises* — not the context a provider is
             configured to serve, which is ``execution.served_context`` on a benchmark result
-            ([ADR-0023](../../../docs/adr/0023-runtime-profile-resolution.md) §4).
+            (ADR-0023 §4).
         embedding_dim: Hidden/embedding dimension.
         layers: Transformer layer count.
         attention_heads: Attention head count.

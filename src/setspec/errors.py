@@ -38,7 +38,7 @@ class SchemaVersionUnsupported(SuiteError):
 
     Raised only for an unsupported **major**. A newer *minor* within a supported major is accepted
     by design — that is the reader policy in
-    [ADR-0009 rule 3](../../docs/adr/0009-setspec-schema-strategy.md), and it is what lets two
+    ADR-0009 rule 3, and it is what lets two
     applications at different versions exchange documents. An unsupported major is never partially
     parsed: a breaking change means the fields no longer mean what this build thinks they mean, so
     reading "the parts we recognise" would produce confident nonsense.

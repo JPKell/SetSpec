@@ -2,9 +2,9 @@
 
 Imports pydantic and :mod:`baseaicore`; performs no I/O. This is the suite's most load-bearing
 cross-application contract — the entire FreeWeight → LoadCoach value proposition
-([ADR-0022](../../../docs/adr/0022-capability-evidence-record-contract.md)) — so
+(ADR-0022) — so
 ``CapabilityEvidenceFields`` reproduces
-[ADR-0022 §1](../../../docs/adr/0022-capability-evidence-record-contract.md)'s normative field
+ADR-0022 §1's normative field
 table verbatim rather than approximating it: every field name, type and meaning below has that
 table as its direct source, not this module's own judgment.
 
@@ -23,8 +23,8 @@ from pydantic import Field, model_validator
 
 from setspec import vocabulary
 from setspec.base import PayloadDefinition, WireSequence, payload_models
-from setspec.benchmark.v1 import EnvironmentFields
 from setspec.model.v1 import ModelIdentityFields
+from setspec.provenance import EnvironmentFields
 from setspec.serialization import MeasurementField, TimestampField
 
 __all__ = [
@@ -52,7 +52,7 @@ class ContributingMetricFields(PayloadDefinition):
             what happened.
         sample_count: Supported samples this metric contributed, matching the same
             excluded-is-not-counted rule as every other sample count in this package
-            ([ADR-0016 §6](../../../docs/adr/0016-unavailable-is-not-zero.md)).
+            (ADR-0016 §6).
     """
 
     metric_key: str = Field(min_length=1)
@@ -73,7 +73,7 @@ class CapabilityEvidenceFields(PayloadDefinition):
             the forward-compatibility exception — see :meth:`_check_capability_id`.
         score: The capability score, ``0`` to ``1`` inclusive.
         confidence: Computed by FreeWeight per
-            [ADR-0017](../../../docs/adr/0017-benchmark-confidence-and-freshness.md); floored at
+            ADR-0017; floored at
             ``0.05`` by that formula's own clamp, never truly zero.
         sample_count: Supported samples that produced ``score``.
         excluded_count: Samples excluded, with the exclusion visible rather than folded silently
@@ -85,7 +85,7 @@ class CapabilityEvidenceFields(PayloadDefinition):
             ``freshness_factor`` decays from. Never the aggregation time.
         computed_at: When this aggregation ran. Provenance and the incremental-export filter
             input; never a confidence input — recomputing evidence must not make it look fresher
-            ([ADR-0022 §2](../../../docs/adr/0022-capability-evidence-record-contract.md)), and
+            (ADR-0022 §2), and
             :meth:`_check_measured_before_computed` enforces the one shape that rule requires:
             ``measured_at`` cannot be later than the aggregation that used it.
         policy_version: The confidence-policy version this evidence was computed under.
@@ -94,7 +94,7 @@ class CapabilityEvidenceFields(PayloadDefinition):
         benchmark_versions: Suite key to version — a hard-separation input.
         dataset_hashes: A hard-separation input.
         prompt_subset_hashes: Hash **per benchmark key, not per pack**
-            ([ADR-0028](../../../docs/adr/0028-prompt-pack-granularity.md)) — a hard-separation
+            (ADR-0028) — a hard-separation
             input.
         contributing_metrics: Which benchmark metrics fed this score, with what weight and how
             many samples.
@@ -146,7 +146,7 @@ class CapabilityEvidenceFields(PayloadDefinition):
         Raises:
             ValueError: If ``measured_at`` follows ``computed_at`` — incoherent, since
                 ``computed_at`` is when the aggregation ran and cannot precede what it aggregated
-                ([ADR-0022 §2](../../../docs/adr/0022-capability-evidence-record-contract.md)).
+                (ADR-0022 §2).
         """
         if self.measured_at > self.computed_at:
             raise ValueError(
@@ -169,7 +169,7 @@ class EvidenceBundleFields(PayloadDefinition):
 
     The FreeWeight → LoadCoach payload: many :class:`CapabilityEvidenceFields`, plus the one flag
     that makes incremental import possible
-    ([ADR-0022 §5](../../../docs/adr/0022-capability-evidence-record-contract.md)).
+    (ADR-0022 §5).
     ``generated_at`` is **not** repeated here: it lives on the enclosing
     :class:`~setspec.envelope.SchemaEnvelope`, and a client stores *that* value to send back as its
     next ``?since=`` — duplicating it on the payload would create two timestamps that could

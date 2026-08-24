@@ -15,12 +15,15 @@ import pytest
 from baseaicore import ValidationError
 
 from setspec import (
+    DRAFT_SCHEMAS,
+    SUPPORTED_SCHEMAS,
     GeneratorInfo,
     SchemaEnvelope,
     SchemaVersion,
     dump_envelope,
     load_envelope,
 )
+from setspec.envelope import _SCHEMA_NAME_PATTERN
 
 _AT = datetime(2026, 8, 22, 14, 3, 11, 250_000, tzinfo=UTC)
 _SCHEMA = "demo.payload"
@@ -206,3 +209,46 @@ class TestEnvelopeRoundTrip:
         envelope: SchemaEnvelope[Any] = load_envelope(document, expect=_SCHEMA, supported=[_V1_0])
         assert envelope.extras["trace_id"] == "01J9K2M"
         assert envelope.model_dump()["trace_id"] == "01J9K2M"
+
+
+class TestRegisteredSchemas:
+    """What this build publishes, and which of those are still provisional."""
+
+    def test_phase_2_payload_types_are_registered(self) -> None:
+        assert {
+            "model.identity",
+            "machine.profile",
+            "benchmark.result",
+            "benchmark.run_summary",
+            "capability.evidence",
+            "benchmark.evidence_bundle",
+        } <= set(SUPPORTED_SCHEMAS)
+
+    def test_every_registered_schema_is_keyed_by_major(self) -> None:
+        """ADR-0009 rule 9: majors, not exact versions — the recorded minor is documentation."""
+        for majors in SUPPORTED_SCHEMAS.values():
+            for major, version in majors.items():
+                assert major == version.major
+
+    def test_every_registered_schema_name_is_well_formed(self) -> None:
+        """A name that `dump_envelope` would refuse must never be registered as readable."""
+        for name in SUPPORTED_SCHEMAS:
+            assert _SCHEMA_NAME_PATTERN.fullmatch(name) is not None
+
+    def test_draft_schemas_are_all_actually_registered(self) -> None:
+        """Marking an unregistered schema draft would describe something that cannot be read."""
+        assert DRAFT_SCHEMAS <= set(SUPPORTED_SCHEMAS)
+
+    def test_every_phase_2_schema_is_still_draft(self) -> None:
+        """Phase 4 freezes these; until then the API must say so, not only the prose."""
+        assert DRAFT_SCHEMAS == set(SUPPORTED_SCHEMAS)
+
+    def test_a_draft_schema_negotiates_exactly_like_a_frozen_one(self) -> None:
+        """Draft is advisory metadata, never a second acceptance rule."""
+        document = _document(
+            GeneratorInfo(name="freeweight", version="1.0.0"),
+            schema="capability.evidence",
+            payload={"anything": 1},
+        )
+        envelope = load_envelope(document, expect="capability.evidence")
+        assert envelope.version == SchemaVersion(1, 0)

@@ -7,8 +7,8 @@ directly (coding standards §5).
 The envelope marks a document that outlives the request that produced it — an export, an evidence
 bundle, a result, an event. An HTTP API's own request and response bodies are *not* enveloped;
 they are versioned by their path and documented by OpenAPI. That boundary, and the membership test
-for it, is [ADR-0025](../../docs/adr/0025-envelope-boundaries.md); the envelope's own shape and the
-reader policy are [ADR-0009](../../docs/adr/0009-setspec-schema-strategy.md).
+for it, is ADR-0025; the envelope's own shape and the
+reader policy are ADR-0009.
 
 The reader policy is one sentence with two halves, and both halves matter:
 
@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
 __all__ = [
+    "DRAFT_SCHEMAS",
     "SUPPORTED_SCHEMAS",
     "GeneratorInfo",
     "SchemaEnvelope",
@@ -64,7 +65,7 @@ class SchemaVersion:
 
     Two numbers, no patch component. A patch has no meaning for a data contract — either the shape
     changed or it did not — and offering one would invite writers to record a change that readers
-    cannot act on ([ADR-0009](../../docs/adr/0009-setspec-schema-strategy.md), rejected
+    cannot act on (ADR-0009, rejected
     alternatives).
 
     Ordering is by major then minor, so versions sort and compare as a reader expects. Ordering is
@@ -148,7 +149,7 @@ SUPPORTED_SCHEMAS: Final[Mapping[str, Mapping[int, SchemaVersion]]] = MappingPro
 Keyed by **major**, not by exact version, because the reader policy accepts any minor within a
 supported major — including a minor newer than this build has heard of. Exact-version matching
 would contradict that policy and would make every additive schema change a breaking one for every
-consumer ([ADR-0009 rule 9](../../docs/adr/0009-setspec-schema-strategy.md)). The recorded minor is
+consumer (ADR-0009 rule 9). The recorded minor is
 therefore documentation of what this build knows, never a ceiling on what it accepts.
 
 **Draft status (as of `0.2.0`, Phase 2).** The six entries above are registered so FreeWeight has
@@ -173,13 +174,42 @@ gets for a schema retired in a future major.
 """
 
 
+DRAFT_SCHEMAS: Final[frozenset[str]] = frozenset(
+    {
+        "model.identity",
+        "machine.profile",
+        "benchmark.result",
+        "benchmark.run_summary",
+        "capability.evidence",
+        "benchmark.evidence_bundle",
+    }
+)
+"""Which registered schemas are still provisional, and may change shape without a major bump.
+
+[Development plan Phase 2](../../docs/packages/setspec/development-plan.md) requires draft status
+to be *visible in the API*, not only described in prose, and asks for it to be marked "in
+``SUPPORTED_SCHEMAS``". It is recorded here instead of inside the version itself, because the
+alternative — a ``"1.0-draft"`` version string — would have to be parsed by
+:class:`SchemaVersion`, whose whole contract is that a version is exactly two integers and that
+non-canonical spellings are refused. Loosening that to carry a temporary status would weaken the
+version format every *frozen* schema depends on, permanently, to describe a condition that ends at
+Phase 4. A separate set says the same thing, is equally machine-readable, and disappears cleanly:
+freezing a schema is one deletion from this set.
+
+A schema listed here is registered and readable — negotiation treats it exactly like any other —
+but a consumer outside this repository should know that pinning to its ``1.0`` today is pinning to
+a shape [Phase 4](../../docs/packages/setspec/development-plan.md) may still correct once
+FreeWeight has produced real results against it. Empty is the goal state.
+"""
+
+
 class GeneratorInfo(PreservingPayload):
     """Which component produced a document, and at which version.
 
     Every envelope carries one. It is what makes an exported file self-describing months later,
     and it is why an event payload needs no ``source`` field of its own — the generator already
     names the producing application
-    ([ADR-0025 §3](../../docs/adr/0025-envelope-boundaries.md)).
+    (ADR-0025 §3).
 
     Preserving rather than strict, like the envelope that holds it: a future SetSpec that adds a
     field here must not make today's readers *reject* documents, which is what a strict model would
@@ -212,7 +242,7 @@ with warnings.catch_warnings():
     class SchemaEnvelope[PayloadT](PreservingPayload):
         """A versioned wrapper around one transferable payload.
 
-        The five fields are fixed by [ADR-0009 §1](../../docs/adr/0009-setspec-schema-strategy.md)::
+        The five fields are fixed by ADR-0009 §1::
 
             {"schema": "benchmark.result", "schema_version": "1.0",
              "generated_at": "2026-08-21T09:14:02.318Z",
@@ -225,7 +255,7 @@ with warnings.catch_warnings():
         business and depends on which of the two — ``Out`` or ``In`` — they need.
 
         Preserving rather than strict, for the reason in
-        [ADR-0009 rule 4](../../docs/adr/0009-setspec-schema-strategy.md) applied to the wrapper: an
+        ADR-0009 rule 4 applied to the wrapper: an
         old reader re-exporting a document written by a newer one must not silently drop an envelope
         field it has not heard of.
 

@@ -6,11 +6,12 @@ Every versioned data contract that crosses an application boundary: benchmark re
 are implemented and tested; `model.identity`, `machine.profile`, `benchmark.result`,
 `benchmark.run_summary`, `capability.evidence` and `benchmark.evidence_bundle` are registered in
 `SUPPORTED_SCHEMAS`, but **draft**: Phase 4 may still reshape a field once FreeWeight has produced
-real results against these payloads. Event and error envelopes arrive in Phase 3. See the
+real results against these payloads. Which schemas are still provisional is readable at runtime
+from `setspec.DRAFT_SCHEMAS`, not only stated here — freezing one is a deletion from that set.
+Event and error envelopes arrive in Phase 3. See the
 [development plan](docs/packages/setspec/development-plan.md) for what each phase adds.
 
-Part of the **Local AI Suite** — see [docs/architecture/executive-summary.md](docs/architecture/executive-summary.md)
-for how SetSpec fits with the suite's other applications and packages.
+Part of the **Local AI Suite**.
 
 ## Install
 
@@ -41,7 +42,7 @@ assert envelope.payload == {"tokens_per_second": 42.0}
 Python version, so a document can be hashed and diffed as well as read.
 
 Payload types come in two halves generated from one definition — a strict `Out` for writers and a
-preserving `In` for readers ([ADR-0009 rule 4](docs/adr/0009-setspec-schema-strategy.md)):
+preserving `In` for readers (ADR-0009 rule 4):
 
 ```python
 from setspec import PayloadDefinition, payload_models
@@ -62,11 +63,11 @@ assert received.extras == {"confidence": 0.87}
 
 A measurement this environment cannot provide is `UNSUPPORTED`, which serializes as the string
 `"unsupported"` — never `null`, never `0`
-([ADR-0016](docs/adr/0016-unavailable-is-not-zero.md)).
+(ADR-0016).
 
 Phase 2's payload types live in their own versioned modules, not the top-level package, so that a
 future `benchmark.result 2.0` can coexist with `v1` rather than racing it for one name
-([ADR-0009 rule 6](docs/adr/0009-setspec-schema-strategy.md)):
+(ADR-0009 rule 6):
 
 ```python
 from setspec.capability.v1 import CapabilityEvidenceOut
@@ -104,16 +105,12 @@ See [docs/packages/setspec/spec.md](docs/packages/setspec/spec.md) §7 for the f
 
 ## Documentation
 
-This repository carries its own copy of the relevant suite documentation under [`docs/`](docs/README.md),
-so it can be read and implemented independently of the other eight suite repositories. Start with
-[`docs/README.md`](docs/README.md).
+Project documentation lives under [`docs/`](docs/README.md). Start with [`docs/README.md`](docs/README.md).
 
 | Read this | For |
 |---|---|
 | [docs/packages/setspec/spec.md](docs/packages/setspec/spec.md) | Purpose, scope, non-goals, public contracts, configuration, acceptance criteria |
 | [docs/packages/setspec/development-plan.md](docs/packages/setspec/development-plan.md) | The phased build plan: goals, work, tests, acceptance criteria per phase |
-| [docs/standards/](docs/standards/) | Coding, testing, security, API, database and packaging standards every phase follows |
-| [docs/adr/](docs/adr/README.md) | The architectural decisions this design rests on |
 
 ## Development
 
