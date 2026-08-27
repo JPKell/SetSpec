@@ -142,6 +142,8 @@ SUPPORTED_SCHEMAS: Final[Mapping[str, Mapping[int, SchemaVersion]]] = MappingPro
         "benchmark.run_summary": MappingProxyType({1: SchemaVersion(1, 0)}),
         "capability.evidence": MappingProxyType({1: SchemaVersion(1, 0)}),
         "benchmark.evidence_bundle": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "benchmark.goal_pack": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "benchmark.calibration_report": MappingProxyType({1: SchemaVersion(1, 0)}),
     }
 )
 """Every payload type this build can read, as ``{schema name: {major: highest known minor}}``.
@@ -151,6 +153,13 @@ supported major — including a minor newer than this build has heard of. Exact-
 would contradict that policy and would make every additive schema change a breaking one for every
 consumer (ADR-0009 rule 9). The recorded minor is
 therefore documentation of what this build knows, never a ceiling on what it accepts.
+
+``benchmark.goal_pack`` and ``benchmark.calibration_report`` were added for FreeWeight's
+user-authored goal benchmarks (ADR-0031, ADR-0032). The calibration report is registered as a
+payload in its own right rather than folded into ``capability.evidence`` because it is meaningful
+precisely when **no** evidence was emitted: a goal below its calibration gate produces no evidence
+record at all, so without a separate schema the most informative outcome a user can get would have
+no wire form.
 
 **Draft status (as of `0.2.0`, Phase 2).** The six entries above are registered so FreeWeight has
 concrete, negotiable schemas to build against, but none is frozen: [development plan Phase 4]
@@ -182,6 +191,8 @@ DRAFT_SCHEMAS: Final[frozenset[str]] = frozenset(
         "benchmark.run_summary",
         "capability.evidence",
         "benchmark.evidence_bundle",
+        "benchmark.goal_pack",
+        "benchmark.calibration_report",
     }
 )
 """Which registered schemas are still provisional, and may change shape without a major bump.

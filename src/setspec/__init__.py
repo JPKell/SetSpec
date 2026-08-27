@@ -13,9 +13,11 @@ vocabulary. Anything not listed in ``__all__`` is private and may change without
 
 **Payload types are not re-exported here.** ``model.identity``, ``machine.profile``,
 ``benchmark.result``, ``benchmark.run_summary``, ``capability.evidence`` and
-``benchmark.evidence_bundle`` (Phase 2) live in their own versioned modules —
-``setspec.model.v1``, ``setspec.machine.v1``, ``setspec.benchmark.v1``, ``setspec.capability.v1`` —
-and are imported from there, e.g. ``from setspec.capability.v1 import CapabilityEvidenceOut``.
+``benchmark.evidence_bundle`` (Phase 2), and ``benchmark.goal_pack`` /
+``benchmark.calibration_report`` (ADR-0031), live in their own versioned modules —
+``setspec.model.v1``, ``setspec.machine.v1``, ``setspec.benchmark.v1``, ``setspec.capability.v1``,
+``setspec.goal.v1`` — and are imported from there, e.g.
+``from setspec.capability.v1 import CapabilityEvidenceOut``.
 This is not an oversight: ADR-0009 rule 6
 requires a v1 payload to remain importable as ``setspec.benchmark.v1`` for a deprecation window
 after ``benchmark.result 2.0`` ships, which only works if ``v1`` and ``v2`` are different modules
@@ -72,6 +74,7 @@ from setspec.serialization import (
 from setspec.vocabulary import (
     CAPABILITIES,
     CAPABILITY_VOCABULARY_VERSION,
+    RESERVED_ROOTS,
     is_known_capability,
     validate_capability,
 )
@@ -82,6 +85,7 @@ __all__ = [
     "DRAFT_SCHEMAS",
     "MAX_PAYLOAD_BYTES",
     "MAX_PAYLOAD_DEPTH",
+    "RESERVED_ROOTS",
     "SUPPORTED_SCHEMAS",
     "UNSUPPORTED_JSON",
     "Aggregation",

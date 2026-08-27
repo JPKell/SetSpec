@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from typing import Self
 
+from baseaicore import CapabilityId
 from baseaicore import ValidationError as SuiteValidationError
 from pydantic import Field, model_validator
 
@@ -28,6 +29,7 @@ from setspec.provenance import EnvironmentFields
 from setspec.serialization import MeasurementField, TimestampField
 
 __all__ = [
+    "CalibrationFields",
     "CapabilityEvidenceFields",
     "CapabilityEvidenceIn",
     "CapabilityEvidenceOut",
@@ -35,10 +37,14 @@ __all__ = [
     "EvidenceBundleFields",
     "EvidenceBundleIn",
     "EvidenceBundleOut",
+    "JudgeSetFields",
 ]
 
 _MINIMUM_CONFIDENCE = 0.05
 _MAXIMUM_SCORE_OR_CONFIDENCE = 1.0
+_GOAL_NAMESPACE_ROOT = "user"
+_SCORE_METHOD_RUNGS: frozenset[str] = frozenset({"rule", "reference", "human", "judge"})
+_METHOD_MIX_TOLERANCE = 1e-6
 
 
 class ContributingMetricFields(PayloadDefinition):
@@ -58,6 +64,73 @@ class ContributingMetricFields(PayloadDefinition):
     metric_key: str = Field(min_length=1)
     weight: float = Field(gt=0.0)
     sample_count: int = Field(ge=0)
+
+
+class JudgeSetFields(PayloadDefinition):
+    """The instrument that produced a judged score — a hard-separation input (ADR-0032 §4).
+
+    A different jury is a different instrument, and therefore a different measurement. This is
+    recorded rather than summarized because a consumer must be able to decide comparability
+    without asking the producer, exactly as it does for a benchmark version.
+
+    Attributes:
+        jurors: Canonical model IDs of the jury members, in the order they were polled. Two or
+            more is the documented default; one is permitted and loses the inter-juror agreement
+            that distinguishes bias from noise, which is why the count is visible here rather
+            than folded into a summary figure.
+        prompt_id: The judge prompt record's ID (ADR-0012 — a judge rubric is a prompt record).
+        prompt_version: That record's semantic version.
+        prompt_sha256: That record's canonical hash, so a consumer can separate on the prompt
+            without holding the prompt.
+        remote: Whether any juror ran outside the measuring machine. Locally-judged and
+            remotely-judged results are **separated**, never merged (ADR-0031 §4), so this is a
+            comparability input and not a footnote.
+    """
+
+    jurors: WireSequence[str] = ()
+    prompt_id: str = Field(min_length=1)
+    prompt_version: str = Field(min_length=1)
+    prompt_sha256: str = Field(min_length=1)
+    remote: bool
+
+
+class CalibrationFields(PayloadDefinition):
+    """How closely the judge agreed with the person whose goal this is (ADR-0031 §3).
+
+    This is what separates an instrument from an opinion. Every field here describes the *judge's*
+    error against user-supplied ground truth, not the measured model's performance.
+
+    Attributes:
+        kappa_w: Quadratic-weighted Cohen's kappa between the user's grades and the jury median
+            over the holdout, weighted across judged criteria. Ordinal-aware and chance-corrected;
+            legitimately negative when the judge disagrees with the user worse than chance would.
+        rho: Spearman rank correlation — whether the judge ranks as the user ranks.
+        mae: Mean absolute error in scale points. Non-negative, and in the units the user thinks
+            in rather than a coefficient they must interpret.
+        bias: Mean signed error. Negative means the judge grades harsher than the user, positive
+            more generously. Unbounded here because its scale is the criterion's, which this
+            payload does not carry.
+        n_anchor: Graded samples embedded in the judge prompt as exemplars. May be zero: a rubric
+            may be calibrated without few-shot anchoring.
+        n_holdout: Graded samples the judge was **never shown**, which is the only honest basis
+            for :attr:`kappa_w`. At least one, because agreement measured over nothing is not a
+            measurement — and it travels with the coefficient everywhere precisely so a reader
+            cannot see ``kappa_w`` without seeing what it was computed over.
+        graded_by: Free text the user supplied identifying the grader. Never an account name or
+            an address harvested from the environment.
+        measured_at: When the calibration was measured. Ages like evidence: a rubric calibrated a
+            year ago against a jury that has since changed is stale in the same sense a benchmark
+            result is.
+    """
+
+    kappa_w: float = Field(ge=-1.0, le=1.0)
+    rho: float = Field(ge=-1.0, le=1.0)
+    mae: float = Field(ge=0.0)
+    bias: float
+    n_anchor: int = Field(ge=0)
+    n_holdout: int = Field(ge=1)
+    graded_by: str = Field(min_length=1)
+    measured_at: TimestampField
 
 
 class CapabilityEvidenceFields(PayloadDefinition):
@@ -101,6 +174,31 @@ class CapabilityEvidenceFields(PayloadDefinition):
         source_run_ids: Producer-local run IDs. A consumer stores these opaquely and never
             resolves them.
         environment: Provider kind and version, GPU driver, CUDA, OS version at measurement.
+        judge_validity_factor: The sixth confidence factor (ADR-0032 §2). **``1.0`` for every
+            measurement scored at ladder rungs 1–4**, which is every native and external
+            benchmark in the suite — so this field changed no existing number when it was added.
+            Below ``1.0`` only for a user-defined goal's judged criteria, in proportion to the
+            judge's measured agreement with the user and shrunk toward zero when the holdout is
+            small. Already multiplied into :attr:`confidence`; carried separately so a consumer
+            can *see* it without recomputing the formula.
+        goal_hash: The measurement-defining hash of the goal that produced this record, when one
+            did. A hard-separation input: a different rubric is a different measurement, exactly
+            as a different benchmark version is (ADR-0032 §4).
+        goal_pack_version: The goal pack's semantic version. Provenance; :attr:`goal_hash` is
+            what separates.
+        score_method_mix: Fraction of scored weight by ladder rung, e.g.
+            ``{"rule": 0.6, "judge": 0.4}``. Keys are drawn from ``rule``, ``reference``,
+            ``human`` and ``judge``; the values sum to ``1``. A ``0.82`` that is 80 % rules is a
+            different kind of number from a ``0.82`` that is 80 % judgement, and a consumer that
+            cannot tell them apart will eventually present them as the same thing.
+        judge_set: The jury that produced any judged portion — a hard-separation input.
+        calibration: The judge's measured agreement with the user. Present whenever a judged
+            criterion contributed; absent for a goal scored entirely by rules.
+        uncalibrated: Always ``False`` on a record that exists, and refused as ``True`` by
+            :meth:`_check_goal_fields_cohere`. A goal below its calibration gate emits **no
+            record at all** rather than a discounted one (ADR-0032 §3), so a ``True`` here means a
+            producer bug — one worth catching on the wire, where it is one field, rather than in a
+            routing decision months later, where it is a mystery.
     """
 
     model: ModelIdentityFields
@@ -122,6 +220,17 @@ class CapabilityEvidenceFields(PayloadDefinition):
     contributing_metrics: WireSequence[ContributingMetricFields] = ()
     source_run_ids: WireSequence[str] = ()
     environment: EnvironmentFields
+    # Goal-sourced group (ADR-0032 §5). Every field is optional and absent on a non-goal record,
+    # which is what makes this a minor schema change rather than a major one.
+    judge_validity_factor: float = Field(
+        default=1.0, ge=_MINIMUM_CONFIDENCE, le=_MAXIMUM_SCORE_OR_CONFIDENCE
+    )
+    goal_hash: str | None = Field(default=None, min_length=1)
+    goal_pack_version: str | None = Field(default=None, min_length=1)
+    score_method_mix: dict[str, float] | None = None
+    judge_set: JudgeSetFields | None = None
+    calibration: CalibrationFields | None = None
+    uncalibrated: bool = False
 
     @model_validator(mode="after")
     def _check_capability_id(self) -> Self:
@@ -155,6 +264,97 @@ class CapabilityEvidenceFields(PayloadDefinition):
                 "cannot precede the measurement it aggregated — freshness decays from "
                 "measured_at, never computed_at, precisely so this cannot be gamed by "
                 "recomputing (ADR-0022 §2)."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _check_goal_fields_cohere(self) -> Self:
+        """Enforce the goal-sourced group's internal rules (ADR-0032 §1–§5).
+
+        Five rules, each closing a way a subjective score could quietly acquire authority it has
+        not earned:
+
+        1. ``uncalibrated`` is never ``True``. The gate withholds the record entirely rather
+           than emitting a discounted one, so a record that says it is uncalibrated is one the
+           producer should not have written.
+        2. A ``user.*`` capability carries a ``goal_hash``. Without it the record cannot be
+           separated from a differently-defined goal of the same name.
+        3. A record with no ``goal_hash`` has ``judge_validity_factor`` exactly ``1.0``. Nothing
+           but a goal can discount validity, and a discount with no goal attached is unexplainable.
+        4. A discounted ``judge_validity_factor`` carries the ``calibration`` it came from. The
+           number is derived from measured agreement; without that agreement it is an assertion.
+        5. A ``calibration`` carries the ``judge_set`` it measured. Agreement is a property of a
+           particular jury, and a jury change separates results — so agreement without the jury's
+           identity cannot be applied.
+
+        Raises:
+            ValueError: If any of the five rules is broken, naming which and why.
+        """
+        if self.uncalibrated:
+            raise ValueError(
+                "uncalibrated must be False on an emitted record. A goal below its calibration "
+                "gate emits no capability.evidence at all — not a discounted record "
+                "(ADR-0032 §3). A True here means the producer wrote a record the gate should "
+                "have withheld."
+            )
+        root = CapabilityId(self.capability_id).root
+        if root == _GOAL_NAMESPACE_ROOT and self.goal_hash is None:
+            raise ValueError(
+                f"capability_id {self.capability_id!r} is in the reserved 'user' namespace but "
+                "carries no goal_hash. A goal's identity is its hash, not its slug: two people's "
+                "'user.house_voice' are different measurements, and without the hash a consumer "
+                "cannot separate them (ADR-0032 §4)."
+            )
+        if self.goal_hash is None and self.judge_validity_factor != 1.0:
+            raise ValueError(
+                f"judge_validity_factor is {self.judge_validity_factor} on a record with no "
+                "goal_hash. Only a user-defined goal's judged criteria can reduce validity; "
+                "every rung 1-4 measurement is exactly 1.0 (ADR-0032 §2)."
+            )
+        if self.judge_validity_factor < 1.0 and self.calibration is None:
+            raise ValueError(
+                f"judge_validity_factor is {self.judge_validity_factor} but no calibration is "
+                "present. The factor is derived from measured judge-user agreement; without the "
+                "calibration it came from it is an assertion, and a consumer cannot audit it."
+            )
+        if self.calibration is not None and self.judge_set is None:
+            raise ValueError(
+                "calibration is present but judge_set is not. Agreement is a property of a "
+                "particular jury — change the jury and the agreement no longer applies — so the "
+                "jury's identity travels with it (ADR-0032 §4)."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _check_score_method_mix(self) -> Self:
+        """Require ``score_method_mix`` to name known ladder rungs and to sum to ``1``.
+
+        Raises:
+            ValueError: If a key is not one of ``rule``, ``reference``, ``human`` or ``judge``, if
+                a fraction falls outside ``[0, 1]``, or if the fractions do not sum to ``1``. A
+                mix that does not sum to one describes scored weight that went somewhere
+                unaccounted for, which makes every share in it wrong rather than merely
+                incomplete.
+        """
+        if self.score_method_mix is None:
+            return self
+        unknown = sorted(set(self.score_method_mix) - _SCORE_METHOD_RUNGS)
+        if unknown:
+            raise ValueError(
+                f"score_method_mix names unknown scoring rungs {unknown}. The ladder's rungs are "
+                f"{sorted(_SCORE_METHOD_RUNGS)} (benchmark catalog §1)."
+            )
+        out_of_range = sorted(k for k, v in self.score_method_mix.items() if not 0.0 <= v <= 1.0)
+        if out_of_range:
+            raise ValueError(
+                f"score_method_mix values must be fractions in [0, 1]; {out_of_range} are not."
+            )
+        total = sum(self.score_method_mix.values())
+        if abs(total - 1.0) > _METHOD_MIX_TOLERANCE:
+            raise ValueError(
+                f"score_method_mix sums to {total}, not 1. It describes how the scored weight was "
+                "divided, so weight that is unaccounted for makes every share in the mix wrong, "
+                "not merely the total."
             )
         return self
 

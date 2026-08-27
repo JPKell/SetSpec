@@ -7,6 +7,38 @@ packaging and release standards §3.
 
 ## [Unreleased]
 
+### Added
+
+- Capability vocabulary **1.1**: the reserved root `user`, whose specializations (`user.<slug>`)
+  carry FreeWeight's user-authored goal evidence (ADR-0032 §1). One root added once closes the
+  question permanently — the existing open-ended specialization rule accepts every goal any user
+  will ever write, so no future rubric is a vocabulary change. `RESERVED_ROOTS` is exported
+  alongside `CAPABILITIES`.
+- `benchmark.goal_pack` and `benchmark.calibration_report` (`setspec.goal.v1`), both registered in
+  `SUPPORTED_SCHEMAS` and listed in `DRAFT_SCHEMAS`. The calibration report is a payload in its own
+  right rather than a field group on evidence because it is meaningful precisely when **no**
+  evidence was emitted: a goal below its calibration gate produces no evidence record at all
+  (ADR-0032 §3).
+- The goal-sourced field group on `capability.evidence`: `judge_validity_factor`, `goal_hash`,
+  `goal_pack_version`, `score_method_mix`, `judge_set`, `calibration` and `uncalibrated`
+  (ADR-0032 §5). Every field is optional and absent on a non-goal record, and
+  `judge_validity_factor` defaults to `1.0` — so **no previously valid document changed meaning
+  and no existing confidence value changed**, which a regression test asserts directly.
+
+### Changed
+
+- A bare reserved root is now refused by `validate_capability` and reported `False` by
+  `is_known_capability`. `user` is a namespace, not a capability: a payload claiming
+  `capability_id: "user"` has lost the identity that is the entire point of the namespace.
+  This affects no term that existed before 1.1.
+- **Forward-compatibility leniency narrows, as it must.** A payload declaring
+  `vocabulary_version: "1.1"` with a root this build does not know was previously accepted — `1.1`
+  was a newer minor than `1.0`, so the spec §13 exception applied. It is now refused, because
+  `1.1` is this build's own vocabulary and there is nothing newer about it. This is what forward
+  compatibility *means* rather than a regression: leniency exists to carry terms from a future
+  this build has not seen, and it evaporates for a version this build has arrived at. A payload
+  declaring `1.2` or later is unaffected. Producers on `1.1` must emit roots that exist at `1.1`.
+
 ## [0.2.0] — 2026-08-23
 
 Phase 2 of the [development plan](docs/packages/setspec/development-plan.md): provisional

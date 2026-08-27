@@ -27,11 +27,12 @@ from setspec.envelope import SchemaVersion
 __all__ = [
     "CAPABILITIES",
     "CAPABILITY_VOCABULARY_VERSION",
+    "RESERVED_ROOTS",
     "is_known_capability",
     "validate_capability",
 ]
 
-CAPABILITY_VOCABULARY_VERSION: Final[str] = "1.0"
+CAPABILITY_VOCABULARY_VERSION: Final[str] = "1.1"
 """The vocabulary's own version, independent of every schema and package version in this build."""
 
 CAPABILITIES: Final[frozenset[str]] = frozenset(
@@ -56,6 +57,8 @@ CAPABILITIES: Final[frozenset[str]] = frozenset(
         "token_efficiency",
         "energy_efficiency",
         "reliability",
+        # 1.1 — reserved; valid only as a specialization. See RESERVED_ROOTS.
+        "user",
     }
 )
 """Every known **root** as of :data:`CAPABILITY_VOCABULARY_VERSION`, drawn from the capabilities
@@ -73,6 +76,27 @@ rejected outright.
 This is a starting vocabulary, not a closed one — Phase 2's own risk note is "guessing the result
 shape," and a root FreeWeight's real benchmarks need that is missing here is exactly the kind of
 gap Phase 4's freeze against real output is meant to find and correct with a minor version bump.
+
+``user`` was added at ``1.1`` and is a member of this set only so that the root rule above accepts
+its specializations; it is refused in its bare form. See :data:`RESERVED_ROOTS`.
+"""
+
+RESERVED_ROOTS: Final[frozenset[str]] = frozenset({"user"})
+"""Roots that are valid **only** as a specialization; the bare root is refused.
+
+``user`` is the sole member. It carries FreeWeight's user-authored goal evidence as
+``user.<slug>`` (ADR-0032 §1), and one root added once closes the question permanently: the
+open-ended specialization rule already accepts ``user.noir_tech_voice`` and every other goal any
+user will ever write, so no future rubric is a vocabulary change.
+
+The bare form is refused because it would mean nothing. Every other root in
+:data:`CAPABILITIES` names a real, measurable capability that a benchmark maps onto; ``user``
+names only the fact that a user defined something. A payload claiming ``capability_id: "user"``
+has lost the identity that is the entire point of the namespace, and accepting it would let that
+loss pass silently into a routing decision.
+
+Membership in this set is checked *in addition to* :data:`CAPABILITIES`, not instead of it, so a
+reserved root's specializations follow exactly the same rule as ``coding.rust``.
 """
 
 
@@ -85,15 +109,18 @@ def is_known_capability(capability_id: str) -> bool:
     Returns:
         ``True`` iff ``capability_id`` parses as a :class:`~baseaicore.CapabilityId` and its root
         is a member of :data:`CAPABILITIES` — so a specialization of a known root, even one never
-        explicitly enumerated, reports ``True``. A syntactically invalid string is ``False``, not
-        an exception — this function answers a yes/no question; :func:`validate_capability` is
-        the one that raises.
+        explicitly enumerated, reports ``True``. A bare :data:`RESERVED_ROOTS` member is
+        ``False``: ``user`` is not itself a capability, only a namespace for them. A
+        syntactically invalid string is ``False``, not an exception — this function answers a
+        yes/no question; :func:`validate_capability` is the one that raises.
     """
     try:
         parsed = CapabilityId(capability_id)
     except SuiteValidationError:
         return False
-    return parsed.root in CAPABILITIES
+    if parsed.root not in CAPABILITIES:
+        return False
+    return parsed.is_specialization or parsed.root not in RESERVED_ROOTS
 
 
 def validate_capability(
@@ -126,12 +153,30 @@ def validate_capability(
         The parsed, syntactically valid :class:`~baseaicore.CapabilityId`.
 
     Raises:
-        ValidationError: If ``capability_id`` is not syntactically valid at all, or if its root
-            is unrecognized and no forward-compatibility exception applies. A specialization of a
-            known root — ``coding.rust`` when ``coding`` is known — is never rejected on that
-            basis alone, even when the specialization itself was never explicitly enumerated.
+        ValidationError: If ``capability_id`` is not syntactically valid at all; if it is a bare
+            :data:`RESERVED_ROOTS` member such as ``"user"``, which is a namespace rather than a
+            capability; or if its root is unrecognized and no forward-compatibility exception
+            applies. A specialization of a known root — ``coding.rust`` when ``coding`` is known,
+            ``user.house_voice`` when ``user`` is — is never rejected on that basis alone, even
+            when the specialization itself was never explicitly enumerated.
+
+            A bare reserved root is refused **regardless of** ``vocabulary_version``: forward
+            compatibility exists so an older build accepts a term a newer one added, and no
+            future minor can turn ``user`` into a capability, because what it lacks is a
+            specialization rather than a vocabulary entry.
     """
     parsed = CapabilityId(capability_id)  # raises baseaicore.ValidationError on bad syntax
+    if parsed.root in RESERVED_ROOTS and not parsed.is_specialization:
+        raise SuiteValidationError(
+            f"{capability_id!r} is a reserved namespace, not a capability. Use a specialization "
+            f"such as {capability_id}.my_goal — a bare {capability_id!r} carries no identity, "
+            "which is the whole reason the namespace exists.",
+            details={
+                "field": "capability_id",
+                "value": capability_id,
+                "reserved_roots": sorted(RESERVED_ROOTS),
+            },
+        )
     if parsed.root in CAPABILITIES:
         return parsed
     if _is_forward_compatible(vocabulary_version):

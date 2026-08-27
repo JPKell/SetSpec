@@ -13,19 +13,23 @@ from baseaicore import CapabilityId, ValidationError
 from setspec.vocabulary import (
     CAPABILITIES,
     CAPABILITY_VOCABULARY_VERSION,
+    RESERVED_ROOTS,
     is_known_capability,
     validate_capability,
 )
+
+ORDINARY_ROOTS = sorted(CAPABILITIES - RESERVED_ROOTS)
+"""Roots that are capabilities in their own right, which is every root but a reserved one."""
 
 
 class TestKnownCapabilities:
     """Known roots are accepted; unknown roots are rejected in strict mode."""
 
-    @pytest.mark.parametrize("capability_id", sorted(CAPABILITIES))
+    @pytest.mark.parametrize("capability_id", ORDINARY_ROOTS)
     def test_every_declared_root_validates(self, capability_id: str) -> None:
         assert validate_capability(capability_id) == CapabilityId(capability_id)
 
-    @pytest.mark.parametrize("capability_id", sorted(CAPABILITIES))
+    @pytest.mark.parametrize("capability_id", ORDINARY_ROOTS)
     def test_every_declared_root_is_known(self, capability_id: str) -> None:
         assert is_known_capability(capability_id) is True
 
@@ -118,3 +122,104 @@ class TestVocabularyVersion:
         assert str(SchemaVersion.parse(CAPABILITY_VOCABULARY_VERSION)) == (
             CAPABILITY_VOCABULARY_VERSION
         )
+
+
+class TestReservedRoots:
+    """A reserved root is a namespace, not a capability: specializations only (ADR-0032 §1)."""
+
+    @pytest.mark.parametrize("root", sorted(RESERVED_ROOTS))
+    def test_a_reserved_root_is_in_the_vocabulary(self, root: str) -> None:
+        """Membership is what makes its specializations validate under the ordinary root rule."""
+        assert root in CAPABILITIES
+
+    @pytest.mark.parametrize("root", sorted(RESERVED_ROOTS))
+    def test_a_bare_reserved_root_is_refused(self, root: str) -> None:
+        with pytest.raises(ValidationError, match="reserved namespace"):
+            validate_capability(root)
+
+    @pytest.mark.parametrize("root", sorted(RESERVED_ROOTS))
+    def test_a_bare_reserved_root_is_not_known(self, root: str) -> None:
+        assert is_known_capability(root) is False
+
+    @pytest.mark.parametrize("root", sorted(RESERVED_ROOTS))
+    def test_a_specialization_of_a_reserved_root_validates(self, root: str) -> None:
+        validated = validate_capability(f"{root}.house_voice")
+        assert validated.root == root
+        assert validated.is_specialization
+
+    @pytest.mark.parametrize("root", sorted(RESERVED_ROOTS))
+    def test_a_specialization_of_a_reserved_root_is_known(self, root: str) -> None:
+        assert is_known_capability(f"{root}.house_voice") is True
+
+    def test_an_unenumerated_user_goal_validates_without_a_vocabulary_change(self) -> None:
+        """The point of the namespace: no future rubric is a vocabulary bump (ADR-0032 §1)."""
+        for slug in ("noir_tech_voice", "brand_voice", "brief_faithfulness", "anything_at_all"):
+            assert is_known_capability(f"user.{slug}") is True
+
+    def test_a_bare_reserved_root_is_refused_even_under_forward_compatibility(self) -> None:
+        """No future minor can turn `user` into a capability: what it lacks is a specialization,
+        not a vocabulary entry, so the forward-compat exception must not reach it."""
+        newer_minor = f"{CAPABILITY_VOCABULARY_VERSION.split('.')[0]}.99"
+        with pytest.raises(ValidationError, match="reserved namespace"):
+            validate_capability("user", vocabulary_version=newer_minor)
+
+    def test_the_refusal_names_the_reserved_roots(self) -> None:
+        """A caller that hit this needs to know which roots behave this way."""
+        with pytest.raises(ValidationError) as excinfo:
+            validate_capability("user")
+        assert excinfo.value.details["reserved_roots"] == sorted(RESERVED_ROOTS)
+
+
+class TestVocabularyVersionIsOneOneOrLater:
+    """`user` arrived at 1.1; a build claiming 1.0 cannot have it (ADR-0032 §1)."""
+
+    def test_the_vocabulary_is_at_least_one_one(self) -> None:
+        from setspec import SchemaVersion
+
+        assert SchemaVersion.parse(CAPABILITY_VOCABULARY_VERSION) >= SchemaVersion(1, 1)
+
+    def test_adding_a_root_was_a_minor_bump(self) -> None:
+        """spec §11.8 rule 8: additions are minor. The major must not have moved."""
+        from setspec import SchemaVersion
+
+        assert SchemaVersion.parse(CAPABILITY_VOCABULARY_VERSION).major == 1
+
+
+class TestABuildPredatingOneOne:
+    """An older build must *ignore* `user.*`, never fail on it (ADR-0009 forward compatibility).
+
+    This is the degradation the whole namespace decision rests on: a LoadCoach released before
+    vocabulary 1.1 has to keep importing evidence bundles that now contain goal records. If it
+    rejected them, adding one root would have broken every consumer in the suite — which is what
+    "additions are minor" is supposed to guarantee it does not.
+
+    The older build is simulated by patching the module's own constants, because the alternative
+    is installing a previous release into the test environment to assert a rule about this one.
+    """
+
+    @pytest.fixture
+    def build_at_one_zero(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Patch this module to look like a build released before `user` existed."""
+        import setspec.vocabulary as vocabulary_module
+
+        monkeypatch.setattr(
+            vocabulary_module, "CAPABILITIES", CAPABILITIES - {"user"}, raising=True
+        )
+        monkeypatch.setattr(vocabulary_module, "RESERVED_ROOTS", frozenset(), raising=True)
+        monkeypatch.setattr(vocabulary_module, "CAPABILITY_VOCABULARY_VERSION", "1.0", raising=True)
+
+    @pytest.mark.usefixtures("build_at_one_zero")
+    def test_it_accepts_a_user_capability_from_a_newer_minor(self) -> None:
+        validated = validate_capability("user.house_voice", vocabulary_version="1.1")
+        assert validated.value == "user.house_voice"
+
+    @pytest.mark.usefixtures("build_at_one_zero")
+    def test_it_does_not_claim_to_know_the_term(self) -> None:
+        """Leniency is acceptance, not knowledge — the distinction spec §13 draws."""
+        assert is_known_capability("user.house_voice") is False
+
+    @pytest.mark.usefixtures("build_at_one_zero")
+    def test_it_still_refuses_a_user_capability_with_no_version_declared(self) -> None:
+        """Forward compatibility is proven by the payload's declared version, never assumed."""
+        with pytest.raises(ValidationError, match="not a known capability"):
+            validate_capability("user.house_voice")

@@ -94,6 +94,17 @@ CapabilityEvidence       # normative field set in ADR-0022: identity triple + ca
                          # dispersion, measured_at, computed_at, policy_version,
                          # vocabulary_version, benchmark_versions, dataset_hashes,
                          # prompt_subset_hashes, contributing_metrics, source_run_ids, environment
+                         # + goal-sourced group (ADR-0032 §5), all optional and absent on a
+                         #   non-goal record: judge_validity_factor (defaults 1.0 — every rung 1-4
+                         #   measurement), goal_hash, goal_pack_version, score_method_mix,
+                         #   judge_set, calibration, uncalibrated (refused as True: the gate
+                         #   withholds the record rather than discounting it)
+GoalPack                 # benchmark.goal_pack — a user-authored goal, portable and hash-pinned
+                         # (ADR-0031 §6): slug, goal_hash, criteria with their ladder rung and
+                         # weight, tasks, judge_set. The author's grades do NOT travel with it.
+CalibrationReport        # benchmark.calibration_report — judge-vs-author agreement per criterion
+                         # and weighted, with the gate verdict. A payload in its own right
+                         # because it is meaningful when NO evidence was emitted (ADR-0032 §3)
 PromptRecord             # the prompt record schema (ADR-0028)
 PromptManifest           # pack manifest, prompt_subset_hash helper
 MachineProfilePayload    # exchange form of baseaicore.MachineProfile
@@ -106,6 +117,10 @@ MetricValue              # value | "unsupported", unit, aggregation, higher_is_b
 # Vocabulary
 CAPABILITY_VOCABULARY_VERSION: str
 CAPABILITIES: frozenset[str]
+RESERVED_ROOTS: frozenset[str]        # roots valid ONLY as a specialization; {"user"} at 1.1.
+                                      # `user.house_voice` validates; bare `user` is refused,
+                                      # because it names only the fact that a user defined
+                                      # something (ADR-0032 §1)
 validate_capability(capability_id: str) -> CapabilityId
 is_known_capability(capability_id: str) -> bool
 
@@ -151,6 +166,11 @@ Owns the **schemas**, not the data. It never persists anything.
    they appear in evidence that another application reads, so they are contract-grade, golden-tested
    determinism (ADR-0028 §3).
 8. The capability vocabulary is versioned: additions are minor, removals/redefinitions are major.
+   At **1.1** the reserved root `user` was added, whose specializations (`user.<slug>`) carry
+   FreeWeight's user-authored goal evidence. It is the only root a user's own measurement ever
+   needs: the existing open-ended specialization rule accepts every future goal without a
+   further vocabulary change, and no shipped benchmark maps onto it
+   (ADR-0032 §1).
 
 ## 12. Configuration
 

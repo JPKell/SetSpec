@@ -155,6 +155,66 @@ per application and testing the registry.
 
 ---
 
+## Phase 3A — Capability vocabulary 1.1 and the goal payloads
+
+**Goal:** FreeWeight's user-authored goal benchmarks have a wire form, and one reserved root closes
+the "where do user-defined capabilities live" question permanently.
+
+**Prerequisites:** P2. Independent of P3.
+**Driven by:** ADR-0031,
+ADR-0032.
+**Ships in `setspec 0.3.0`** alongside Phase 4 — no separate release. FreeWeight already pins
+`setspec>=0.3,<0.4` and its P11 already requires SetSpec P4, so the existing prerequisite chain
+delivers vocabulary 1.1 before the M3 contract freeze without any change to either pin. The
+package version is **not** bumped when this phase lands: the work accumulates under
+`## [Unreleased]` and `CAPABILITY_VOCABULARY_VERSION` moves on its own axis
+(Packaging Standards §3.1 — distribution,
+HTTP API and schema versions are independent, and the vocabulary is a fourth).
+
+**Note for the 0.3.0 release.** This phase narrows forward-compatibility leniency: a payload
+declaring `vocabulary_version: "1.1"` with an unknown root was accepted at vocabulary 1.0 and is
+refused at 1.1, because 1.1 is no longer newer than this build. That is what the exception means
+rather than a regression, but it is a behaviour change on a previously-accepted input, so it is
+a **minor**-bump item per the pre-1.0 rule ("public API may change on a minor bump") and must
+appear in the changelog rather than passing as an implementation detail.
+
+**Work**
+* Add the reserved root `user` to `CAPABILITIES`; bump `CAPABILITY_VOCABULARY_VERSION` to `1.1`
+  (an addition, therefore minor — spec §11.8 rule 8). Export `RESERVED_ROOTS`.
+* Refuse a bare reserved root in `validate_capability` and report it `False` from
+  `is_known_capability` — including under forward compatibility, since what `user` lacks is a
+  specialization rather than a vocabulary entry, and no future minor can supply one.
+* `setspec.goal.v1`: `benchmark.goal_pack` and `benchmark.calibration_report`, registered in
+  `SUPPORTED_SCHEMAS` and listed in `DRAFT_SCHEMAS`.
+* The goal-sourced field group on `capability.evidence`, every field optional, with the coherence
+  validators from ADR-0032 §5.
+
+**Tests**
+* `user.anything_at_all` validates; bare `user` is refused with the reserved roots named.
+* A build predating 1.1 **accepts** a `user.*` term from a newer-minor payload and does not claim
+  to know it — the degradation that makes "additions are minor" true for every consumer, asserted
+  rather than assumed.
+* A record omitting the entire goal group still validates and reports
+  `judge_validity_factor == 1.0`: proof that this phase changed no existing number.
+* Verdict coherence: a calibration report whose `passed_gate` contradicts its own
+  `weighted_kappa_w` against `min_agreement` is refused; a rules-only goal cannot report a failed
+  gate, because it had nothing to calibrate.
+* `score_method_mix` sums to 1 over known ladder rungs.
+
+**Acceptance criteria**
+1. A `setspec`-only script validates a `user.house_voice` evidence payload and refuses bare `user`.
+2. A goal pack and a calibration report round-trip through canonical JSON; a reader preserves an
+   unknown field and a writer refuses one.
+3. `CAPABILITY_VOCABULARY_VERSION` is `1.1` and its major is unchanged.
+
+**Known risks:** the goal payload shapes precede FreeWeight actually producing them, which is why
+both are registered as **draft** and Phase 4 may still move a field.
+**Likely failure modes:** minting a root per goal (making a shared contract user-mutable); letting
+the forward-compatibility exception reach a bare reserved root.
+**Gold standards:** versioned contracts; additions are minor; unknown-field preservation.
+
+---
+
 ## Phase 4 — Freeze v1.0, publish schemas and goldens
 
 **Goal:** the contracts are stable, machine-readable and testable from other repositories.
