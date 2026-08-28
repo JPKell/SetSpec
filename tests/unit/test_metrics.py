@@ -20,6 +20,7 @@ from setspec import Aggregation, MetricValueIn, MetricValueOut, canonical_dumps
 def _measured(**overrides: Any) -> dict[str, Any]:
     """Return a valid measured metric, with fields optionally replaced."""
     return {
+        "metric_key": "ttft_ms",
         "value": 12.5,
         "unit": "ms",
         "aggregation": "mean",
@@ -99,6 +100,53 @@ class TestSampleCoherence:
     def test_an_unknown_aggregation_is_rejected(self) -> None:
         with pytest.raises(PydanticValidationError):
             MetricValueOut.model_validate(_measured(aggregation="average"))
+
+
+class TestTheMetricKey:
+    """A sequence of these is only useful if each member says which metric it is."""
+
+    def test_a_metric_without_a_key_is_rejected(self) -> None:
+        """The whole reason the field exists: an unattributable number is not a measurement."""
+        payload = _measured()
+        del payload["metric_key"]
+        with pytest.raises(PydanticValidationError):
+            MetricValueOut.model_validate(payload)
+
+    def test_an_empty_key_is_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            MetricValueOut.model_validate(_measured(metric_key=""))
+
+    @pytest.mark.parametrize(
+        "key",
+        ["TTFT_ms", "ttft-ms", "1ttft", "ttft ms", "_ttft", "criterion.", ".ttft", "a..b"],
+    )
+    def test_a_key_outside_lower_snake_case_is_rejected(self, key: str) -> None:
+        """One concept, one spelling: two casings of a key are two metrics to every reader."""
+        with pytest.raises(PydanticValidationError):
+            MetricValueOut.model_validate(_measured(metric_key=key))
+
+    @pytest.mark.parametrize(
+        "key",
+        [
+            "ttft_ms",
+            "task_success",
+            "decode_tokens_per_second",
+            "p95",
+            "f1",
+            # A namespaced key from a real producer: FreeWeight's goal suites emit one metric per
+            # criterion, and the segment after the dot is the author's own slug.
+            "criterion.house_voice",
+            "score_method_mix_judge",
+        ],
+    )
+    def test_real_metric_keys_are_accepted(self, key: str) -> None:
+        assert MetricValueOut.model_validate(_measured(metric_key=key)).metric_key == key
+
+    def test_the_key_survives_a_round_trip(self) -> None:
+        metric = MetricValueOut.model_validate(_measured(metric_key="observed_kv_bytes_per_token"))
+        rendered = json.loads(canonical_dumps(metric))
+        assert rendered["metric_key"] == "observed_kv_bytes_per_token"
+        assert MetricValueOut.model_validate(rendered) == metric
 
 
 class TestOutAndInDiffer:

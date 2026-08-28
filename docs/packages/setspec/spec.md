@@ -112,7 +112,7 @@ ModelIdentityPayload     # exchange form of baseaicore.ModelIdentity + descripto
 EventEnvelope            # SSE and job/run event payloads
 ErrorEnvelope            # the object inside {"error": {…}} — a shape, transported UNWRAPPED
                          # (ADR-0025 §4); never itself put in a SetSpec envelope
-MetricValue              # value | "unsupported", unit, aggregation, higher_is_better, n, dispersion
+MetricValue              # metric_key, value | "unsupported", unit, aggregation, higher_is_better, n, dispersion
 
 # Vocabulary
 CAPABILITY_VOCABULARY_VERSION: str

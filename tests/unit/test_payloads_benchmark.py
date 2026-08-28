@@ -98,6 +98,7 @@ def _result(**overrides: Any) -> dict[str, Any]:
         "status": "completed",
         "metrics": [
             {
+                "metric_key": "task_success",
                 "value": 0.92,
                 "unit": "ratio",
                 "aggregation": "mean",
@@ -106,6 +107,7 @@ def _result(**overrides: Any) -> dict[str, Any]:
                 "dispersion": 0.05,
             },
             {
+                "metric_key": "tool_selection_accuracy",
                 "value": 0.88,
                 "unit": "ratio",
                 "aggregation": "mean",
@@ -324,6 +326,7 @@ class TestBenchmarkRunSummary:
             _run_summary(
                 aggregate_metrics=[
                     {
+                        "metric_key": "task_success",
                         "value": 0.9,
                         "unit": "ratio",
                         "aggregation": "mean",

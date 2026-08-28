@@ -33,6 +33,21 @@ __all__ = [
 
 _MINIMUM_SAMPLES_FOR_DISPERSION = 2
 
+_METRIC_KEY_PATTERN = r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$"
+"""Lower snake case, starting with a letter, optionally dot-separated into segments.
+
+Enforced rather than documented because a metric key is an identifier a consumer *matches on*:
+``ttft_ms`` and ``TTFT_ms`` from two producers would be two metrics to every reader and one metric
+to every author. The suite's own rule — same concept, same name, everywhere — needs the wire format
+to be the place it cannot be broken.
+
+**Dots are for namespacing, and a real producer needs them**: FreeWeight's user-authored goal suites
+emit one metric per criterion as ``criterion.<key>``, where the segment after the dot is the
+author's own slug. A flat pattern would either reject those keys or push the producer to flatten
+them into ``criterion_<key>``, which collides with a criterion actually named ``key``. Each segment
+follows the same rule as a whole key, so ``criterion.house_voice`` is legal and
+``criterion.House Voice`` is not."""
+
 
 class Aggregation(StrEnum):
     """How the samples behind a metric were reduced to one number.
@@ -98,6 +113,12 @@ class MetricValueFields(PayloadDefinition):
     whether comparing it to another one is meaningful.
 
     Attributes:
+        metric_key: Which metric this is — ``"decode_tokens_per_second"``, ``"task_success"``.
+            Required, because both :class:`~setspec.benchmark.v1.BenchmarkResultFields` and
+            :class:`~setspec.benchmark.v1.BenchmarkRunSummaryFields` carry *sequences* of this
+            model: without a key, a consumer receives a list of numbers it cannot attribute,
+            chart, compare across runs, or check for the metric it was looking for. Lower snake
+            case, so one metric has one spelling everywhere in the suite.
         value: The measurement, or ``UNSUPPORTED`` when this environment could not provide one.
             Never ``null`` and never ``0`` as a stand-in for absence
             (ADR-0016 §4).
@@ -118,6 +139,7 @@ class MetricValueFields(PayloadDefinition):
             spread of a single observation is undefined rather than zero.
     """
 
+    metric_key: str = Field(min_length=1, pattern=_METRIC_KEY_PATTERN)
     value: MeasurementField
     unit: str = Field(min_length=1)
     aggregation: WireEnum[Aggregation]

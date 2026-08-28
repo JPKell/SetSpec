@@ -8,7 +8,38 @@ packaging and release standards §3.
 ## [Unreleased]
 
 ### Added
+- **`metric_key` on `MetricValueFields`.** The model declared value, unit, aggregation, direction,
+  sample count and dispersion — and nothing saying *which metric it is*. Both
+  `BenchmarkResultFields.metrics` and `BenchmarkRunSummaryFields.aggregate_metrics` carry sequences
+  of it, so a consumer receiving a run summary got a list of numbers it could not attribute, chart,
+  compare across runs, or check for the metric it was looking for. Required rather than optional:
+  an unattributable number is not a measurement. Constrained to lower snake case, because a metric
+  key is an identifier consumers match on and `ttft_ms` / `TTFT_ms` from two producers would be two
+  metrics to every reader and one to every author.
 
+  The payload stays at schema **1.0**: the suite is pre-freeze, no consumer outside it reads these
+  documents yet, and results produced during development are not being retained. After M3 the same
+  change would be a minor.
+
+- **The release workflow can publish, and can rehearse first.** `release.yml` gained the
+  `publish-testpypi` job every other package repository has — manual only, via *Actions → Release →
+  Run workflow* — because packaging and release standards §6 requires a successful TestPyPI publish
+  ahead of a package's **first** real release, and `0.2.0` is this one. The `release` job gained
+  `environment: pypi`, which must match the Environment name configured on the PyPI trusted
+  publisher; without it the OIDC exchange has nothing to match and the publish is rejected.
+- **`requirements/ci.lock`, `release.in` and `release.lock`**, hash-pinned — required by packaging
+  standards §4 and present in `baseaicore`, `modelrack` and `sweatmeter`, absent here. Every
+  blocking CI job now installs the locked toolchain and then `pip install . --no-deps`; the build
+  jobs use the release lock with `--no-isolation`, so the wheel CI checks is produced by the same
+  pinned backend as the wheel that ships. Without them every run re-resolved, and a new `ruff` or
+  `mypy` release could change the result with no commit to explain it.
+
+  The 3.14 early-warning job stays unlocked on purpose: pinning versions that have no 3.14 wheels
+  would defeat the point of an early warning.
+
+  Verified by installing both locks under `--require-hashes` into a clean interpreter and running
+  every CI job against them — format, lint, mypy, import-linter, tests, coverage, contracts,
+  `pip-audit` and the workflow's own build and `twine check`.
 - Capability vocabulary **1.1**: the reserved root `user`, whose specializations (`user.<slug>`)
   carry FreeWeight's user-authored goal evidence (ADR-0032 §1). One root added once closes the
   question permanently — the existing open-ended specialization rule accepts every goal any user
@@ -38,6 +69,25 @@ packaging and release standards §3.
   compatibility *means* rather than a regression: leniency exists to carry terms from a future
   this build has not seen, and it evaporates for a version this build has arrived at. A payload
   declaring `1.2` or later is unaffected. Producers on `1.1` must emit roots that exist at `1.1`.
+
+### Fixed
+- **Coverage measured a directory nothing imports.** `[tool.coverage.run] source` named
+  `src/setspec`, the source *path*, while CI installs the built distribution — so the moment the
+  jobs stopped using an editable install, coverage reported **0 %** and failed the 95 % floor for a
+  reason unrelated to the tests. It now names the importable package, with `[tool.coverage.paths]`
+  folding the source tree and site-packages into one name, matching `baseaicore`. Both install
+  modes report 100 %.
+- **`pip-audit` in CI was auditing nothing.** A bare `pip-audit` inspects the job's own
+  environment, which contained only `pip-audit` itself, so that job had been reporting clean on an
+  empty set. It now audits both locks.
+- **`install-check` did not verify that `py.typed` reaches the wheel.** The marker is easy to add
+  to the source tree and easy to leave out of the build, and the failure is silent: a consumer's
+  `mypy --strict` treats an unmarked package as untyped rather than erroring. Asserted against the
+  installed wheel now. (It does ship — this closes the hole, it does not fix a break.)
+
+- The package ships a `py.typed` marker, matching every other implemented package in the suite
+  (`baseaicore`, `modelrack`, `sweatmeter`). Without it, `mypy --strict` in a consuming repository
+  cannot see this package's types at all and treats every import from it as untyped.
 
 ## [0.2.0] — 2026-08-23
 

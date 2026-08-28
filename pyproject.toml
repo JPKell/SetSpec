@@ -84,8 +84,14 @@ markers = [
 testpaths = ["tests"]
 
 [tool.coverage.run]
-source = ["src/setspec"]
+# The importable name, not the source path: CI installs the built distribution rather than an
+# editable checkout (Packaging Standards §4), so coverage must find the package wherever it is
+# installed. `paths` folds the two locations into one name in the report.
+source = ["setspec"]
 branch = true
+
+[tool.coverage.paths]
+source = ["src/setspec", "*/site-packages/setspec"]
 
 [tool.coverage.report]
 # Spec §18 and every phase's acceptance criteria say 95; the scaffold shipped 85.
