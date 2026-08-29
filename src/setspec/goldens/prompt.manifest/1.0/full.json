@@ -1,0 +1,19 @@
+{
+  "pack_id": "freeweight.core",
+  "pack_version": "1.4.0",
+  "schema_version": "1.0",
+  "generated_at": "2026-08-21T00:00:00Z",
+  "prompts": [
+    {
+      "prompt_id": "stages.draft.article",
+      "version": "2.1.0",
+      "sha256": "sha256:2316b1ae73d0298e17a78677e2da9fd5f0b664ae09cc3dd7625f26921a9630c5"
+    },
+    {
+      "prompt_id": "stages.notify.digest",
+      "version": "1.0.0",
+      "sha256": "sha256:21829b05324468ff96ddb14ea45d4ca3a3409c4d0928f1475089aa0467c276a0"
+    }
+  ],
+  "pack_sha256": "sha256:39e13d67c588be76c08d82073e8de6953c73974740d1ceedf1d66394d5e4efef"
+}

@@ -1,0 +1,37 @@
+{
+  "$comment": "setspec prompt.manifest 1.0 -- hand-authored: a pack's manifest.json is validated by setspec.prompts.load_pack (see _check_manifest), never an envelope payload. Describes the shape build_manifest()/write_manifest() produce.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "prompt.manifest",
+  "type": "object",
+  "required": ["pack_id", "pack_version", "prompts", "pack_sha256"],
+  "properties": {
+    "pack_id": { "type": "string", "minLength": 1 },
+    "pack_version": { "type": "string", "minLength": 1 },
+    "schema_version": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "prompts": {
+      "type": "array",
+      "description": "One entry per shipped record, sorted by (prompt_id, version).",
+      "items": {
+        "type": "object",
+        "required": ["prompt_id", "version", "sha256"],
+        "properties": {
+          "prompt_id": { "type": "string" },
+          "version": { "type": "string" },
+          "sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "description": "prompt_record_hash(record) -- over the record's canonical JSON, not its file bytes."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "pack_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "pack_hash(references) over the sorted (prompt_id, version, sha256) triples of every entry in `prompts`. Provenance only -- never a fingerprint input (ADR-0028 §1)."
+    }
+  },
+  "additionalProperties": true
+}

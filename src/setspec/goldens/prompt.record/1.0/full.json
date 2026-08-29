@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "prompt_id": "stages.draft.article",
+  "version": "2.1.0",
+  "purpose": "Produce a first draft of one article section from a compiled requirement set.",
+  "system": "You are drafting one section of an article. Follow every hard requirement.",
+  "template": "SECTION: {{ section_title }}\n\nREQUIREMENTS\n{{ requirements_json }}\n\nCONTEXT\n{{ context }}\n\nWrite roughly {{ word_target }} words.",
+  "variables": {
+    "section_title": {
+      "type": "string",
+      "required": true,
+      "description": "Human-readable section title"
+    },
+    "requirements_json": {
+      "type": "string",
+      "required": true,
+      "description": "Canonical JSON of compiled requirements"
+    },
+    "context": {
+      "type": "string",
+      "required": false,
+      "default": "",
+      "description": "Bounded prior context"
+    },
+    "word_target": {
+      "type": "integer",
+      "required": false,
+      "default": 800,
+      "min": 100,
+      "max": 5000,
+      "description": "Target word count for the drafted section"
+    }
+  },
+  "task": "content.article_draft",
+  "capability": "creative_writing",
+  "response": {
+    "format": "text",
+    "json_schema_ref": null,
+    "expectations": ["No headings above H3", "No meta-commentary about being an AI"]
+  },
+  "model_requirements": {
+    "min_context_tokens": 8192,
+    "requires_capabilities": [],
+    "recommended_temperature": 0.7
+  },
+  "metadata": {
+    "author": "suite",
+    "created_at": "2026-08-21T00:00:00Z",
+    "changed_at": "2026-08-21T00:00:00Z",
+    "change_reason": "Tightened the requirement-compliance instruction after audit-pass regressions.",
+    "supersedes": "2.0.0",
+    "tags": ["content", "draft"]
+  }
+}

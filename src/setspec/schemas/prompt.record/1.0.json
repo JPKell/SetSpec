@@ -1,0 +1,70 @@
+{
+  "$comment": "setspec prompt.record 1.0 -- hand-authored: PromptRecord is a plain dataclass, not a pydantic envelope payload (prompt records are pack files, never wrapped in a SchemaEnvelope). Describes the fields setspec.prompts.load_record validates; an application's pack may add further fields (task, capability, response, model_requirements, ...) that this loader carries through unread -- see prompt-management-standards.md §2.1 for the full documented shape one application (FreeWeight) actually ships.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "prompt.record",
+  "type": "object",
+  "required": ["schema_version", "prompt_id", "version", "template", "purpose", "metadata"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Version of this record format, independent of the prompt's own version."
+    },
+    "prompt_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Dotted, stable, unique within the pack. Never renamed -- a rename is a new prompt."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The prompt's own semantic version."
+    },
+    "system": {
+      "type": ["string", "null"],
+      "description": "The system turn's Jinja2 template, or null when the prompt has none."
+    },
+    "template": {
+      "type": "string",
+      "description": "The user turn's Jinja2 template, rendered with StrictUndefined."
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One sentence saying what this prompt is for."
+    },
+    "variables": {
+      "type": "object",
+      "description": "Every variable used in system or template, by name. Undeclared use fails validation; a declared-but-unused variable fails too.",
+      "additionalProperties": { "$ref": "#/$defs/variable" }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["change_reason"],
+      "properties": {
+        "change_reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Mandatory on every version bump. \"Improved wording\" is not a reason."
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "variable": {
+      "type": "object",
+      "required": ["type", "description"],
+      "properties": {
+        "type": { "type": "string", "enum": ["string", "integer", "number", "boolean"] },
+        "required": { "type": "boolean", "default": false },
+        "description": { "type": "string", "minLength": 1 },
+        "default": {},
+        "min": { "type": "number" },
+        "max": { "type": "number" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

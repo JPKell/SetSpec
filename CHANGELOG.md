@@ -7,6 +7,44 @@ packaging and release standards §3.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-08-29
+
+### Added
+
+- **`setspec.prompts`** (Phase 5): prompt records and prompt packs, moved from
+  `freeweight.services.prompts` — `PromptRecord`, `PromptLibrary`, `load_record()`, `load_pack()`,
+  `build_manifest()`/`write_manifest()`, and the pack's three hashes
+  (`prompt_record_hash`/`prompt_subset_hash`/`pack_hash`, ADR-0028). Rendering runs through a
+  sandboxed, loader-less Jinja2 `Environment` with `StrictUndefined` (prompt-management-standards
+  §2.1): a referenced-but-unsupplied variable is an error, a template cannot reach the filesystem,
+  and dunder attribute access is refused. `load_pack()`'s `root` parameter is required — the
+  package carries no opinion about an application's pack layout; an application wanting a default
+  location supplies its own thin wrapper (FreeWeight's `freeweight.services.prompts.load_pack`
+  keeps its old default this way).
+
+  FreeWeight's own prompt pack adopts this module in the same change (pulling its P12 forward):
+  `freeweight.services.prompts` is now a re-export shim over `setspec.prompts`, verified to
+  produce a byte-identical `pack_hash` and per-record hash for every shipped prompt before and
+  after the move, with FreeWeight's own gate green afterwards. Two applications reading the same
+  pack format from two processes is the scenario ADR-0028's hashes exist for; the FreeWeight move
+  is the first proof of it.
+
+- **JSON Schema for `prompt.record` and `prompt.manifest`**, committed as package data under
+  `setspec/schemas/prompt.record/1.0.json` and `setspec/schemas/prompt.manifest/1.0.json`, with
+  golden examples under `setspec/goldens/prompt.{record,manifest}/1.0/{full,minimal}.json`. Both
+  are hand-authored rather than generated: `PromptRecord` is a plain dataclass, not a pydantic
+  envelope payload — a prompt record is a pack file on disk, never wrapped in a `SchemaEnvelope` —
+  so neither schema is registered in `PUBLISHED_SCHEMAS`/reachable through `json_schema_for()`,
+  and the goldens are illustrative examples rather than inputs to the envelope contract-test
+  matrix in `tests/contract/test_goldens.py`. Every golden round-trips through the real
+  `load_pack()` loader (not just schema validation) and its `pack_sha256` is the module's own
+  computed hash, not a hand-typed value.
+
+### Changed
+
+- Bumped to 0.4.0 for the `setspec.prompts` addition (packaging standards §3: additive,
+  non-breaking).
+
 ## [0.3.0] — 2026-08-28
 
 ### Added
