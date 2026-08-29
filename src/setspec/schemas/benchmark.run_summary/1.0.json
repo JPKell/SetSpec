@@ -1,0 +1,819 @@
+{
+  "$comment": "setspec benchmark.run_summary 1.0 — generated from the writer model.",
+  "$defs": {
+    "ApplicationProvenanceFields": {
+      "additionalProperties": true,
+      "description": "Which build of the producing application measured this result.\n\nAll three fields are part of Machine Identity §6's minimum provenance set — none is optional\nenrichment — because \"which code produced this number\" is exactly what a regression hunt needs\nfirst.\n\nAttributes:\n    name: The producing application's distribution name, e.g. ``\"freeweight\"``.\n    version: That application's version string.\n    git_commit: The commit the running build was checked out at.",
+      "properties": {
+        "git_commit": {
+          "minLength": 1,
+          "title": "Git Commit",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "git_commit"
+      ],
+      "title": "ApplicationProvenanceFields",
+      "type": "object"
+    },
+    "BenchmarkSuiteProvenanceFields": {
+      "additionalProperties": true,
+      "description": "Which benchmark suite produced this result, and at what version.\n\nA differing ``suite_version``, ``dataset_hashes`` entry or ``prompt_subset_hash`` is a hard\nseparation for confidence purposes, never a discount\n(ADR-0017) — SetSpec carries\nthese values; the separation itself is LoadCoach's and FreeWeight's behaviour to apply.\n\nAttributes:\n    suite_key: The suite's identifier, e.g. ``\"native.tool_use\"``.\n    suite_version: The suite's own version. A version bump separates results from different\n        versions; they are never averaged together.\n    category: The suite's category, e.g. ``\"tool_use\"``.\n    runner: How the suite executes, e.g. ``\"native\"`` or ``\"external\"``.\n    manifest_hash: Hash of the suite's manifest, as the producer computed it.\n    dataset_hashes: Hash per named dataset the suite depends on; empty when the suite uses\n        none.\n    prompt_subset_hash: Hash of only the prompts *this suite* declares — the fingerprint\n        input, per benchmark and not per pack\n        (ADR-0028).\n    prompts_used: Every prompt named by ``prompt_subset_hash``, individually identified.",
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "dataset_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Dataset Hashes",
+          "type": "object"
+        },
+        "manifest_hash": {
+          "minLength": 1,
+          "title": "Manifest Hash",
+          "type": "string"
+        },
+        "prompt_subset_hash": {
+          "minLength": 1,
+          "title": "Prompt Subset Hash",
+          "type": "string"
+        },
+        "prompts_used": {
+          "$ref": "#/$defs/WireSequence_PromptUsageFields_",
+          "default": []
+        },
+        "runner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Runner"
+        },
+        "suite_key": {
+          "minLength": 1,
+          "title": "Suite Key",
+          "type": "string"
+        },
+        "suite_version": {
+          "minLength": 1,
+          "title": "Suite Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "suite_key",
+        "suite_version",
+        "manifest_hash",
+        "prompt_subset_hash"
+      ],
+      "title": "BenchmarkSuiteProvenanceFields",
+      "type": "object"
+    },
+    "EnvironmentFields": {
+      "additionalProperties": true,
+      "description": "Provider and drift-sensitive environment facts at the moment of measurement.\n\nUnifies two bullets that\nMachine Identity §6 and\nADR-0022 §1 describe separately\nbut with identical content — \"provider kind + provider version\" and \"GPU driver, CUDA, OS\nversion at measurement\" — into the one nested object ADR-0022 already names ``environment`` on\n``capability.evidence``, so a benchmark result and the evidence aggregated from it carry\nenvironment facts in the same shape rather than two shapes a consumer has to reconcile.\n\nEvery field but the provider's own identity is a **drift signal, not identity**: a driver\nupgrade or an OS patch must never re-identify a machine (that is the machine fingerprint's\njob, and it deliberately excludes all of these), but it does reduce confidence in performance\nevidence measured before it\n(ADR-0017's\n``environment_factor``). Recording them is what makes that reduction computable at all.\n\nAttributes:\n    provider_kind: Which kind of provider served the model for this measurement.\n    provider_version: The provider's own version string, e.g. ``\"0.32.13\"``.\n    gpu_driver_version: A drift signal; ``None`` when no GPU was involved.\n    cuda_version: The CUDA/ROCm toolkit version. A drift signal.\n    os_version: A drift signal.",
+      "properties": {
+        "cuda_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cuda Version"
+        },
+        "gpu_driver_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gpu Driver Version"
+        },
+        "os_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Os Version"
+        },
+        "provider_kind": {
+          "$ref": "#/$defs/WireEnum_ProviderKind_"
+        },
+        "provider_version": {
+          "minLength": 1,
+          "title": "Provider Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider_kind",
+        "provider_version"
+      ],
+      "title": "EnvironmentFields",
+      "type": "object"
+    },
+    "MetricValueFields": {
+      "additionalProperties": true,
+      "description": "Field definitions for ``metric.value``; use :data:`MetricValueOut` / :data:`MetricValueIn`.\n\nA measured quantity, the statistic that produced it, and enough context for a consumer to know\nwhether comparing it to another one is meaningful.\n\nAttributes:\n    metric_key: Which metric this is — ``\"decode_tokens_per_second\"``, ``\"task_success\"``.\n        Required, because both :class:`~setspec.benchmark.v1.BenchmarkResultFields` and\n        :class:`~setspec.benchmark.v1.BenchmarkRunSummaryFields` carry *sequences* of this\n        model: without a key, a consumer receives a list of numbers it cannot attribute,\n        chart, compare across runs, or check for the metric it was looking for. Lower snake\n        case, so one metric has one spelling everywhere in the suite.\n    value: The measurement, or ``UNSUPPORTED`` when this environment could not provide one.\n        Never ``null`` and never ``0`` as a stand-in for absence\n        (ADR-0016 §4).\n    unit: The unit the value is in — ``\"ms\"``, ``\"tokens_per_second\"``, ``\"bytes\"``,\n        ``\"ratio\"``. Required and non-empty: a number whose unit lives only in a field name\n        somewhere upstream is a number that will eventually be compared against a different\n        one (coding standards §3). Dimensionless quantities say so explicitly rather than\n        passing an empty string.\n    aggregation: Which statistic ``value`` is.\n    higher_is_better: Whether a larger value is a better result. Carried per metric because\n        the answer differs between metrics in the same payload — throughput and latency point\n        in opposite directions — and a consumer ranking results cannot infer it from the unit.\n    sample_count: How many **supported** samples produced ``value``. Unsupported samples are\n        excluded from the statistic and from this count (ADR-0016 §6), so it is the honest\n        denominator, not the number of attempts.\n    dispersion: Spread of those samples, as a standard deviation in the same unit as\n        ``value``. ``UNSUPPORTED`` when fewer than two supported samples exist, because the\n        spread of a single observation is undefined rather than zero.",
+      "properties": {
+        "aggregation": {
+          "$ref": "#/$defs/WireEnum_Aggregation_"
+        },
+        "dispersion": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Dispersion"
+        },
+        "higher_is_better": {
+          "title": "Higher Is Better",
+          "type": "boolean"
+        },
+        "metric_key": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$",
+          "title": "Metric Key",
+          "type": "string"
+        },
+        "sample_count": {
+          "minimum": 0,
+          "title": "Sample Count",
+          "type": "integer"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "metric_key",
+        "value",
+        "unit",
+        "aggregation",
+        "higher_is_better",
+        "sample_count",
+        "dispersion"
+      ],
+      "title": "MetricValueFields",
+      "type": "object"
+    },
+    "ModelIdentityFields": {
+      "additionalProperties": true,
+      "description": "Field definitions for ``model.identity``; use :data:`ModelIdentityOut` /\n:data:`ModelIdentityIn`.\n\n:attr:`canonical_id` and :attr:`identity_confidence` are materialized rather than left for a\nreader to derive, so a consumer can display or index by them without reconstructing a\n:class:`baseaicore.ModelIdentity`. Both are still validated against the identity triple on\nevery construction — see :meth:`_check_identity_coherence` — so \"provenance completeness\nenforced by the schema\" (Phase 2 gold standard) applies to the derived fields too, not only\nthe fields nothing computes.\n\nAttributes:\n    provider_kind: Which kind of provider serves these weights ([ADR-0008]\n        (0008 canonical model identity)). Reuses\n        :class:`baseaicore.ProviderKind` directly rather than a shadow enum, so a new provider\n        kind reaches this schema the moment BaseAiCore adds it.\n    provider_model_name: Exactly as the provider names it, case and punctuation preserved.\n    artifact_digest: ``\"sha256:\"`` + 64 lowercase hex characters, or ``None`` when the\n        provider exposes none.\n    identity_confidence: ``digest`` iff ``artifact_digest`` is present, ``name_only``\n        otherwise — checked, not merely documented.\n    canonical_id: ``{provider_kind}/{provider_model_name}@{digest_short}``\n        (ADR-0024). Lossy and\n        display-only; never parsed back into its parts.\n    observed_at: When this descriptor snapshot was read from the provider.\n    family: The model family name, e.g. ``\"qwen3.5\"``.\n    architecture: The architecture name, e.g. ``\"transformer\"``, ``\"mamba\"``.\n    parameter_count: Total parameter count.\n    active_parameter_count: MoE active parameters per token; equal to\n        ``parameter_count`` for a dense model.\n    expert_count: Number of experts, for a mixture-of-experts model.\n    quantization: Weight quantization, e.g. ``\"Q8_0\"``.\n    weight_format: File format, e.g. ``\"gguf\"``, ``\"safetensors\"``.\n    size_bytes: On-disk size of the weights.\n    max_context: The context length the model *advertises* — not the context a provider is\n        configured to serve, which is ``execution.served_context`` on a benchmark result\n        (ADR-0023 §4).\n    embedding_dim: Hidden/embedding dimension.\n    layers: Transformer layer count.\n    attention_heads: Attention head count.\n    kv_heads: Key/value head count.\n    head_dim: Dimension of each attention head.\n    vocab_size: Tokenizer vocabulary size.\n    rope_config: RoPE scaling configuration, in the provider's own shape.\n    sliding_window: Sliding-attention window size, if the architecture uses one.\n    declared_capabilities: What the provider *claims* this model can do — never conflated\n        with a measured capability from ``capability.evidence``.\n    license_text: The model's license, if the provider exposes one.",
+      "properties": {
+        "active_parameter_count": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Active Parameter Count"
+        },
+        "architecture": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Architecture"
+        },
+        "artifact_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Digest"
+        },
+        "attention_heads": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Attention Heads"
+        },
+        "canonical_id": {
+          "minLength": 1,
+          "title": "Canonical Id",
+          "type": "string"
+        },
+        "declared_capabilities": {
+          "$ref": "#/$defs/WireSequence_WireEnum_ModelCapabilityFlag__",
+          "default": []
+        },
+        "embedding_dim": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Embedding Dim"
+        },
+        "expert_count": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Expert Count"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family"
+        },
+        "head_dim": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Head Dim"
+        },
+        "identity_confidence": {
+          "$ref": "#/$defs/WireEnum_IdentityConfidence_"
+        },
+        "kv_heads": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Kv Heads"
+        },
+        "layers": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Layers"
+        },
+        "license_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "License Text"
+        },
+        "max_context": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Max Context"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "parameter_count": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Parameter Count"
+        },
+        "provider_kind": {
+          "$ref": "#/$defs/WireEnum_ProviderKind_"
+        },
+        "provider_model_name": {
+          "minLength": 1,
+          "title": "Provider Model Name",
+          "type": "string"
+        },
+        "quantization": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quantization"
+        },
+        "rope_config": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rope Config"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Size Bytes"
+        },
+        "sliding_window": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Sliding Window"
+        },
+        "vocab_size": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Vocab Size"
+        },
+        "weight_format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weight Format"
+        }
+      },
+      "required": [
+        "provider_kind",
+        "provider_model_name",
+        "identity_confidence",
+        "canonical_id",
+        "observed_at"
+      ],
+      "title": "ModelIdentityFields",
+      "type": "object"
+    },
+    "PromptUsageFields": {
+      "additionalProperties": true,
+      "description": "One prompt this benchmark used, identified precisely enough to reproduce it.\n\nAttributes:\n    prompt_id: The prompt's identifier in its manifest.\n    version: The prompt's own version.\n    sha256: The prompt's content hash, as computed by whatever produced it — not validated\n        against a fixed hex format here; see the module docstring's note on hash-shaped\n        fields.",
+      "properties": {
+        "prompt_id": {
+          "minLength": 1,
+          "title": "Prompt Id",
+          "type": "string"
+        },
+        "sha256": {
+          "minLength": 1,
+          "title": "Sha256",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt_id",
+        "version",
+        "sha256"
+      ],
+      "title": "PromptUsageFields",
+      "type": "object"
+    },
+    "ReproducibilityFingerprintFields": {
+      "additionalProperties": true,
+      "description": "The answer to \"could this measurement be repeated, and is that other result the same\nthing?\"\n(Machine Identity §4).\n\nAttributes:\n    reproducibility_fingerprint: The hash itself, as the producer computed it.\n    fingerprint_document: The **full input document that was hashed**, stored verbatim per\n        Machine Identity §4 rule 2 — \"a hash you cannot explain is useless during a regression\n        hunt.\" Kept as a structured but untyped mapping rather than a fully modeled nested\n        structure: its shape mirrors provenance already typed elsewhere on this result, and a\n        second, independently-typed copy of that shape would drift from the first the moment\n        either one changed.",
+      "properties": {
+        "fingerprint_document": {
+          "additionalProperties": true,
+          "title": "Fingerprint Document",
+          "type": "object"
+        },
+        "reproducibility_fingerprint": {
+          "minLength": 1,
+          "title": "Reproducibility Fingerprint",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reproducibility_fingerprint",
+        "fingerprint_document"
+      ],
+      "title": "ReproducibilityFingerprintFields",
+      "type": "object"
+    },
+    "RuntimeProfileFields": {
+      "additionalProperties": true,
+      "description": "How a provider was asked to load and serve the model — nested only, never enveloped alone.\n\nMirrors :class:`baseaicore.RuntimeProfile` field for field, including that every field is\noptional: a profile with everything unset means \"provider defaults\" and is itself a legal,\nhashable profile (ADR-0023 §1).\n\nAttributes:\n    context_size: Requested context window, in tokens.\n    kv_cache_precision: KV-cache quantization, e.g. ``\"f16\"``, ``\"q8_0\"``.\n    gpu_layers: Number of layers offloaded to GPU.\n    flash_attention: Whether flash attention was requested.\n    threads: CPU thread count requested.\n    batch_size: Requested batch size.\n    keep_alive: How long the provider was asked to keep the model loaded, e.g. ``\"5m\"``.\n    provider_options: Anything provider-specific with no field of its own.",
+      "properties": {
+        "batch_size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Batch Size"
+        },
+        "context_size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Size"
+        },
+        "flash_attention": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Flash Attention"
+        },
+        "gpu_layers": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gpu Layers"
+        },
+        "keep_alive": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Keep Alive"
+        },
+        "kv_cache_precision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kv Cache Precision"
+        },
+        "provider_options": {
+          "additionalProperties": true,
+          "title": "Provider Options",
+          "type": "object"
+        },
+        "threads": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Threads"
+        }
+      },
+      "title": "RuntimeProfileFields",
+      "type": "object"
+    },
+    "WireEnum_Aggregation_": {
+      "description": "How the samples behind a metric were reduced to one number.\n\nA ``StrEnum`` so it serializes and logs as its own name rather than an opaque integer\n(coding standards §2). The value is what appears on the wire.\n\nRecording this is not bookkeeping: a mean and a p95 of the same samples answer different\nquestions, and a consumer that compares one against the other is comparing nothing. The\nproducer knows which it computed; the wire format makes it say so.",
+      "enum": [
+        "single",
+        "mean",
+        "median",
+        "min",
+        "max",
+        "sum",
+        "count",
+        "stddev",
+        "p50",
+        "p95",
+        "p99",
+        "ratio",
+        "raw"
+      ],
+      "title": "Aggregation",
+      "type": "string"
+    },
+    "WireEnum_IdentityConfidence_": {
+      "description": "How firmly an identity pins down a specific set of weights.\n\nStored alongside every measurement. A ``NAME_ONLY`` result carries a permanent caveat: the\nprovider exposed no digest, so it can never be proven later to describe the same weights —\na tag such as ``qwen3.5:latest`` can be repointed at any time. LoadCoach reduces evidence\nconfidence for it and FreeWeight shows it in the UI\n([ADR-0017](../../docs/adr/0017-benchmark-confidence-and-freshness.md)).",
+      "enum": [
+        "digest",
+        "name_only"
+      ],
+      "title": "IdentityConfidence",
+      "type": "string"
+    },
+    "WireEnum_ModelCapabilityFlag_": {
+      "description": "A capability a provider *claims* a model has, distinct from a measured capability.\n\nFreeWeight's benchmark results record what a model can *demonstrably* do; this flag records\nonly what the provider *says* it can do. The two are never conflated\n(``docs/architecture/canonical-model-identity.md`` §3).",
+      "enum": [
+        "tools",
+        "vision",
+        "thinking",
+        "structured_output",
+        "embedding"
+      ],
+      "title": "ModelCapabilityFlag",
+      "type": "string"
+    },
+    "WireEnum_ProviderKind_": {
+      "description": "The kind of provider serving a model — not the endpoint it is served from.\n\nKind rather than address, because the same weights served by Ollama and by vLLM behave\ndifferently enough (templating, sampling defaults, KV handling) that their measurements are\nnot interchangeable, while a port or hostname change is a deployment detail that must not\nfragment a model's history.\n\nAdding a member is a backwards-compatible change; renaming one is not, because the value is\npersisted and appears in every canonical ID.",
+      "enum": [
+        "ollama",
+        "openai_compatible",
+        "llamacpp",
+        "vllm",
+        "fake"
+      ],
+      "title": "ProviderKind",
+      "type": "string"
+    },
+    "WireEnum_RunStatus_": {
+      "description": "A run's state, mirroring FreeWeight's run state machine (data model §3).\n\n``INTERRUPTED`` is distinct from ``FAILED``: it means the process died, is discovered at\nstartup recovery, and is resumable with completed benchmarks preserved — a run summary\ncarrying it is not reporting a failure, it is reporting an unfinished run.",
+      "enum": [
+        "queued",
+        "preparing",
+        "warming",
+        "running",
+        "completed",
+        "failed",
+        "cancelling",
+        "cancelled",
+        "interrupted"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    },
+    "WireSequence_MetricValueFields_": {
+      "items": {
+        "$ref": "#/$defs/MetricValueFields"
+      },
+      "type": "array"
+    },
+    "WireSequence_PromptUsageFields_": {
+      "items": {
+        "$ref": "#/$defs/PromptUsageFields"
+      },
+      "type": "array"
+    },
+    "WireSequence_WireEnum_ModelCapabilityFlag__": {
+      "items": {
+        "$ref": "#/$defs/WireEnum_ModelCapabilityFlag_"
+      },
+      "type": "array"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "aggregate_metrics": {
+      "$ref": "#/$defs/WireSequence_MetricValueFields_",
+      "default": []
+    },
+    "application": {
+      "$ref": "#/$defs/ApplicationProvenanceFields"
+    },
+    "completed_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Completed At"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "environment": {
+      "$ref": "#/$defs/EnvironmentFields"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Code"
+    },
+    "error_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Text"
+    },
+    "machine_fingerprint": {
+      "minLength": 1,
+      "title": "Machine Fingerprint",
+      "type": "string"
+    },
+    "model": {
+      "$ref": "#/$defs/ModelIdentityFields"
+    },
+    "reproducibility": {
+      "$ref": "#/$defs/ReproducibilityFingerprintFields"
+    },
+    "runtime_profile": {
+      "$ref": "#/$defs/RuntimeProfileFields"
+    },
+    "runtime_profile_hash": {
+      "minLength": 1,
+      "title": "Runtime Profile Hash",
+      "type": "string"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "status": {
+      "$ref": "#/$defs/WireEnum_RunStatus_"
+    },
+    "suite": {
+      "$ref": "#/$defs/BenchmarkSuiteProvenanceFields"
+    }
+  },
+  "required": [
+    "model",
+    "runtime_profile",
+    "runtime_profile_hash",
+    "machine_fingerprint",
+    "suite",
+    "environment",
+    "application",
+    "reproducibility",
+    "status",
+    "created_at"
+  ],
+  "title": "benchmark.run_summary",
+  "type": "object"
+}

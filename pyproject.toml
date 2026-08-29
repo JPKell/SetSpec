@@ -36,6 +36,13 @@ dev = [
     "ruff>=0.6,<1",
     "import-linter>=2.0,<3",
     "respx>=0.21,<1",
+    # Phase 4's contract tests validate every golden against the *published* JSON Schema, not only
+    # against the model that generated it. Without a real validator that assertion would be a
+    # hand-rolled subset of draft 2020-12 written in this repository — which is to say, the thing
+    # under test would also be the thing testing it. Test-only: nothing under `src/` imports it,
+    # and `setspec` itself pulls in no validator (packaging standards §4).
+    "jsonschema>=4.23,<5",
+    "types-jsonschema>=4.23,<5",
 ]
 
 [project.urls]

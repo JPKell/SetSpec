@@ -1,0 +1,44 @@
+{
+  "architecture": "x86_64",
+  "cpu_model": "AMD Ryzen 9 7950X 16-Core Processor",
+  "gpus": [
+    {
+      "compute_capability": "12.0",
+      "cuda_version": "13.0",
+      "driver_version": "580.65.06",
+      "index": 0,
+      "name": "NVIDIA GeForce RTX 5060 Ti",
+      "uuid": "GPU-4f1c9a2b-77de-4c31-9a0e-1b2c3d4e5f60",
+      "vendor": "nvidia",
+      "vram_total_bytes": 17179869184
+    },
+    {
+      "compute_capability": "8.9",
+      "cuda_version": "13.0",
+      "driver_version": "580.65.06",
+      "index": 1,
+      "name": "NVIDIA GeForce RTX 4070",
+      "uuid": "GPU-88ab1c2d-3e4f-5061-7283-94a5b6c7d8e9",
+      "vendor": "nvidia",
+      "vram_total_bytes": 12884901888
+    }
+  ],
+  "hostname": "bench-01",
+  "kernel": "7.0.0-30-generic",
+  "logical_cores": 32,
+  "machine_fingerprint": "9d1c4a5f2b7e83c04e6a1f9b2d5c7e83",
+  "observed_at": "2026-08-21T09:10:00.000Z",
+  "os_name": "Linux",
+  "os_version": "Ubuntu 26.04 LTS",
+  "physical_cores": 16,
+  "python_version": "3.13.15",
+  "ram_bytes": 137438953472,
+  "storage": [
+    {
+      "model": "Samsung SSD 990 PRO 2TB",
+      "name": "nvme0n1",
+      "rotational": false,
+      "size_bytes": 2000398934016
+    }
+  ]
+}

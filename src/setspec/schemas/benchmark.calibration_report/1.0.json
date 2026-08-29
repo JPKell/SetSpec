@@ -1,0 +1,264 @@
+{
+  "$comment": "setspec benchmark.calibration_report 1.0 — generated from the writer model.",
+  "$defs": {
+    "CalibrationFields": {
+      "additionalProperties": true,
+      "description": "How closely the judge agreed with the person whose goal this is (ADR-0031 §3).\n\nThis is what separates an instrument from an opinion. Every field here describes the *judge's*\nerror against user-supplied ground truth, not the measured model's performance.\n\nAttributes:\n    kappa_w: Quadratic-weighted Cohen's kappa between the user's grades and the jury median\n        over the holdout, weighted across judged criteria. Ordinal-aware and chance-corrected;\n        legitimately negative when the judge disagrees with the user worse than chance would.\n    rho: Spearman rank correlation — whether the judge ranks as the user ranks.\n    mae: Mean absolute error in scale points. Non-negative, and in the units the user thinks\n        in rather than a coefficient they must interpret.\n    bias: Mean signed error. Negative means the judge grades harsher than the user, positive\n        more generously. Unbounded here because its scale is the criterion's, which this\n        payload does not carry.\n    n_anchor: Graded samples embedded in the judge prompt as exemplars. May be zero: a rubric\n        may be calibrated without few-shot anchoring.\n    n_holdout: Graded samples the judge was **never shown**, which is the only honest basis\n        for :attr:`kappa_w`. At least one, because agreement measured over nothing is not a\n        measurement — and it travels with the coefficient everywhere precisely so a reader\n        cannot see ``kappa_w`` without seeing what it was computed over.\n    graded_by: Free text the user supplied identifying the grader. Never an account name or\n        an address harvested from the environment.\n    measured_at: When the calibration was measured. Ages like evidence: a rubric calibrated a\n        year ago against a jury that has since changed is stale in the same sense a benchmark\n        result is.",
+      "properties": {
+        "bias": {
+          "title": "Bias",
+          "type": "number"
+        },
+        "graded_by": {
+          "minLength": 1,
+          "title": "Graded By",
+          "type": "string"
+        },
+        "kappa_w": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Kappa W",
+          "type": "number"
+        },
+        "mae": {
+          "minimum": 0.0,
+          "title": "Mae",
+          "type": "number"
+        },
+        "measured_at": {
+          "format": "date-time",
+          "title": "Measured At",
+          "type": "string"
+        },
+        "n_anchor": {
+          "minimum": 0,
+          "title": "N Anchor",
+          "type": "integer"
+        },
+        "n_holdout": {
+          "minimum": 1,
+          "title": "N Holdout",
+          "type": "integer"
+        },
+        "rho": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Rho",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kappa_w",
+        "rho",
+        "mae",
+        "bias",
+        "n_anchor",
+        "n_holdout",
+        "graded_by",
+        "measured_at"
+      ],
+      "title": "CalibrationFields",
+      "type": "object"
+    },
+    "CriterionAgreementFields": {
+      "additionalProperties": true,
+      "description": "One judged criterion's measured agreement between the jury and the goal's author.\n\nAttributes:\n    criterion_key: Which criterion this describes.\n    weight: Its share of the composite, so a reader can weight the agreement figures the same\n        way the score weighted the criteria.\n    agreement: The agreement statistics for this criterion, including the ``n_holdout`` that\n        makes ``kappa_w`` interpretable.\n    inter_juror_alpha: Krippendorff's alpha across jurors on this criterion, or ``None`` for a\n        single-juror jury — where the quantity does not exist rather than being zero. This is\n        what distinguishes jury bias from jury noise: high alpha with low ``kappa_w`` means\n        the jurors agree with each other and not with the author.\n    judge_validity_factor: This criterion's contribution to the goal's validity factor:\n        ``max(0, kappa_w) * min(1, sqrt(n_holdout / n_holdout_target))`` (ADR-0032 §2).",
+      "properties": {
+        "agreement": {
+          "$ref": "#/$defs/CalibrationFields"
+        },
+        "criterion_key": {
+          "minLength": 1,
+          "title": "Criterion Key",
+          "type": "string"
+        },
+        "inter_juror_alpha": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": -1.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inter Juror Alpha"
+        },
+        "judge_validity_factor": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Judge Validity Factor",
+          "type": "number"
+        },
+        "weight": {
+          "exclusiveMinimum": 0.0,
+          "maximum": 1.0,
+          "title": "Weight",
+          "type": "number"
+        }
+      },
+      "required": [
+        "criterion_key",
+        "weight",
+        "agreement",
+        "judge_validity_factor"
+      ],
+      "title": "CriterionAgreementFields",
+      "type": "object"
+    },
+    "JudgeSetFields": {
+      "additionalProperties": true,
+      "description": "The instrument that produced a judged score — a hard-separation input (ADR-0032 §4).\n\nA different jury is a different instrument, and therefore a different measurement. This is\nrecorded rather than summarized because a consumer must be able to decide comparability\nwithout asking the producer, exactly as it does for a benchmark version.\n\nAttributes:\n    jurors: Canonical model IDs of the jury members, in the order they were polled. Two or\n        more is the documented default; one is permitted and loses the inter-juror agreement\n        that distinguishes bias from noise, which is why the count is visible here rather\n        than folded into a summary figure.\n    prompt_id: The judge prompt record's ID (ADR-0012 — a judge rubric is a prompt record).\n    prompt_version: That record's semantic version.\n    prompt_sha256: That record's canonical hash, so a consumer can separate on the prompt\n        without holding the prompt.\n    remote: Whether any juror ran outside the measuring machine. Locally-judged and\n        remotely-judged results are **separated**, never merged (ADR-0031 §4), so this is a\n        comparability input and not a footnote.",
+      "properties": {
+        "jurors": {
+          "$ref": "#/$defs/WireSequence_str_",
+          "default": []
+        },
+        "prompt_id": {
+          "minLength": 1,
+          "title": "Prompt Id",
+          "type": "string"
+        },
+        "prompt_sha256": {
+          "minLength": 1,
+          "title": "Prompt Sha256",
+          "type": "string"
+        },
+        "prompt_version": {
+          "minLength": 1,
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "remote": {
+          "title": "Remote",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "prompt_id",
+        "prompt_version",
+        "prompt_sha256",
+        "remote"
+      ],
+      "title": "JudgeSetFields",
+      "type": "object"
+    },
+    "WireSequence_CriterionAgreementFields_": {
+      "items": {
+        "$ref": "#/$defs/CriterionAgreementFields"
+      },
+      "type": "array"
+    },
+    "WireSequence_str_": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "criteria": {
+      "$ref": "#/$defs/WireSequence_CriterionAgreementFields_",
+      "default": []
+    },
+    "goal_hash": {
+      "minLength": 1,
+      "title": "Goal Hash",
+      "type": "string"
+    },
+    "goal_slug": {
+      "minLength": 1,
+      "title": "Goal Slug",
+      "type": "string"
+    },
+    "graded_by": {
+      "minLength": 1,
+      "title": "Graded By",
+      "type": "string"
+    },
+    "judge_set": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JudgeSetFields"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "judge_validity_factor": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Judge Validity Factor",
+      "type": "number"
+    },
+    "measured_at": {
+      "format": "date-time",
+      "title": "Measured At",
+      "type": "string"
+    },
+    "min_agreement": {
+      "maximum": 1.0,
+      "minimum": -1.0,
+      "title": "Min Agreement",
+      "type": "number"
+    },
+    "n_anchor": {
+      "minimum": 0,
+      "title": "N Anchor",
+      "type": "integer"
+    },
+    "n_holdout": {
+      "minimum": 0,
+      "title": "N Holdout",
+      "type": "integer"
+    },
+    "partition_seed": {
+      "title": "Partition Seed",
+      "type": "integer"
+    },
+    "passed_gate": {
+      "title": "Passed Gate",
+      "type": "boolean"
+    },
+    "policy_version": {
+      "minLength": 1,
+      "title": "Policy Version",
+      "type": "string"
+    },
+    "weighted_kappa_w": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Weighted Kappa W"
+    }
+  },
+  "required": [
+    "goal_slug",
+    "goal_hash",
+    "min_agreement",
+    "passed_gate",
+    "judge_validity_factor",
+    "n_anchor",
+    "n_holdout",
+    "partition_seed",
+    "graded_by",
+    "measured_at",
+    "policy_version"
+  ],
+  "title": "benchmark.calibration_report",
+  "type": "object"
+}

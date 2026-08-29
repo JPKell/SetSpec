@@ -8,10 +8,10 @@ ADR-0022 §1's normative field
 table verbatim rather than approximating it: every field name, type and meaning below has that
 table as its direct source, not this module's own judgment.
 
-**Status: draft (`1.0`).** See :mod:`setspec.model.v1` for what that means; here it means
-specifically that this module predates FreeWeight actually aggregating evidence, so
-[Phase 4](../../../docs/packages/setspec/development-plan.md) may still adjust a field that turns
-out to be shaped wrong once real aggregation exists to shape it against.
+**Status: frozen (`1.0`).** See :mod:`setspec.model.v1` for what the freeze binds this module to.
+FreeWeight's real aggregation — the thing this module was written ahead of — reached
+[Phase 4](../../../docs/packages/setspec/development-plan.md) needing no field reshaped, which is
+what the freeze records.
 """
 
 from __future__ import annotations

@@ -1,0 +1,13 @@
+{
+  "goal_hash": "0f3d8b1a6c92e547",
+  "goal_slug": "no_em_dashes",
+  "graded_by": "the goal's author",
+  "judge_validity_factor": 1.0,
+  "measured_at": "2026-08-20T16:41:00.000Z",
+  "min_agreement": 0.4,
+  "n_anchor": 0,
+  "n_holdout": 0,
+  "partition_seed": 20260820,
+  "passed_gate": true,
+  "policy_version": "1.0.0"
+}

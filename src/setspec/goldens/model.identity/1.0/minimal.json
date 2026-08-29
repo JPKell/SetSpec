@@ -1,0 +1,7 @@
+{
+  "canonical_id": "ollama/qwen3.5:latest@unknown",
+  "identity_confidence": "name_only",
+  "observed_at": "2026-08-21T09:14:02.318Z",
+  "provider_kind": "ollama",
+  "provider_model_name": "qwen3.5:latest"
+}

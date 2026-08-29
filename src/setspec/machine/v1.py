@@ -6,7 +6,7 @@ required. A dataclass field with no Python default is required on the wire too; 
 default keeps that same default here, so a machine that could not report its core count produces
 the identical payload whether it went through this schema or was read straight from BaseAiCore.
 
-**Status: draft (`1.0`).** See :mod:`setspec.model.v1` for what that means and why.
+**Status: frozen (`1.0`).** See :mod:`setspec.model.v1` for what the freeze binds this module to.
 
 **Deliberately not re-verified:** ``machine_fingerprint``. This is the one place a hash-shaped
 field is carried without being recomputed and checked, and the asymmetry with

@@ -5,16 +5,17 @@ measurement subject, metrics plus provenance plus a samples reference;
 ``BenchmarkRunSummary`` is one run: subject, suite, status, timings, aggregate metrics
 ([spec §7](../../../docs/packages/setspec/spec.md)).
 
-**Status: draft (`1.0`).** See :mod:`setspec.model.v1` for what that means. The known risk named
-by [development plan Phase 2](../../../docs/packages/setspec/development-plan.md) is guessing the
-result shape before FreeWeight exists to produce one; this module is built from the one place that
-shape is already normative before any FreeWeight code exists —
+**Status: frozen (`1.0`).** See :mod:`setspec.model.v1` for what the freeze binds this module to.
+The known risk named by
+[development plan Phase 2](../../../docs/packages/setspec/development-plan.md) was guessing the
+result shape before FreeWeight existed to produce one; this module was built from the one place
+that shape was already normative before any FreeWeight code existed —
 Machine Identity §6, "what
 every measured result must carry" — plus
 ADR-0022 and
 ADR-0023 for the fields those provenance
 bullets expand into. A field with no normative source here is a field this module does
-not invent; Phase 4 corrects any gap against FreeWeight's real output.
+not invent, and Phase 4's pass against FreeWeight's real output found no gap to correct.
 
 **Hash-shaped fields are checked, never guessed, and never both.** Two kinds of string on this
 result claim to be a hash of something: ``runtime_profile_hash`` is recomputed from the embedded

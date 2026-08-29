@@ -2,13 +2,17 @@
 
 Every versioned data contract that crosses an application boundary: benchmark results, capability evidence, event/error envelopes, prompt records.
 
-**Status:** `0.2.0` — Phases 1–2 complete. The envelope, version negotiation and serialization core
-are implemented and tested; `model.identity`, `machine.profile`, `benchmark.result`,
-`benchmark.run_summary`, `capability.evidence` and `benchmark.evidence_bundle` are registered in
-`SUPPORTED_SCHEMAS`, but **draft**: Phase 4 may still reshape a field once FreeWeight has produced
-real results against these payloads. Which schemas are still provisional is readable at runtime
-from `setspec.DRAFT_SCHEMAS`, not only stated here — freezing one is a deletion from that set.
-Event and error envelopes arrive in Phase 3. See the
+**Status:** `0.3.0` — Phases 1–2, 3A and 4 complete, and **the v1.0 contracts are frozen.** Eight
+payload types are published at `1.0` — `model.identity`, `machine.profile`, `benchmark.result`,
+`benchmark.run_summary`, `capability.evidence`, `benchmark.evidence_bundle`,
+`benchmark.goal_pack` and `benchmark.calibration_report` — each with generated JSON Schema and at
+least three golden payloads shipped as package data. `setspec.DRAFT_SCHEMAS` is empty, which is
+where the freeze is readable at runtime rather than only stated here; from now on a new optional
+field is a minor bump and anything else is a major, enforced by a snapshot diff in CI.
+
+The [schema catalogue](docs/schemas.md) lists every payload type, its artifacts, and the
+cross-field rules the JSON Schema cannot express. Event and error envelopes (Phase 3) and prompt
+records (Phase 5) are not yet written and are therefore not part of the freeze. See the
 [development plan](docs/packages/setspec/development-plan.md) for what each phase adds.
 
 Part of the **Local AI Suite**.

@@ -7,7 +7,84 @@ packaging and release standards §3.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-28
+
 ### Added
+
+- **The v1.0 freeze.** `DRAFT_SCHEMAS` is now empty. Every registered payload type —
+  `model.identity`, `machine.profile`, `benchmark.result`, `benchmark.run_summary`,
+  `capability.evidence`, `benchmark.evidence_bundle`, `benchmark.goal_pack` and
+  `benchmark.calibration_report` — is a published `1.0` that may no longer be reshaped in place.
+  FreeWeight's real output (P6 onward, and P8A–8B for the two goal payloads) demanded no field
+  change, so the freeze is a promotion rather than a correction; the one field the pass did add,
+  `MetricValueFields.metric_key`, landed before it and is frozen *with* the schema.
+
+  The set survives its own emptiness deliberately: it is the mechanism a future draft uses, and
+  deleting it would leave the next provisional payload type either shipping silently provisional or
+  inventing a second way to say so.
+
+- **Generated JSON Schema for every published version**, committed as package data under
+  `setspec/schemas/<schema>/<version>.json` and reachable through `json_schema_for()`. Generated
+  from the **writer** (`extra="forbid"`) half, so a published document says
+  `additionalProperties: false` — which is the contract API standards §7 rule 5 states and the one
+  a producer's test suite asserts its output against. The reader policy stays where it belongs, in
+  the reader: `load_envelope` accepts an unknown minor by comparing majors, never by loosening a
+  version's schema to admit fields it cannot describe.
+
+  Every `$ref` resolves inside the document's own `$defs`. Nothing is fetched (spec §14).
+
+- **25 golden payloads**, three or more per version, under
+  `setspec/goldens/<schema>/<version>/<name>.json` and reachable through `golden_payloads()` and
+  `golden_names()`. Each version ships a `minimal` (only required fields), a `full` (every field
+  populated) and, wherever the payload carries a measurement at all, an `unsupported`-heavy example.
+  `capability.evidence` adds `goal`, a calibrated `user.noir_tech_voice` record with the whole
+  goal-sourced group populated; `benchmark.goal_pack` adds `starter_unforked`; and
+  `benchmark.calibration_report` adds `gate_failed` — the outcome `capability.evidence`
+  deliberately cannot express, because a goal below its gate emits no evidence record at all.
+
+  Which versions need an `unsupported` golden is derived from the published schema rather than
+  listed in the test: a payload whose document contains no `{"const": "unsupported"}` branch has no
+  measurement field to leave unsupported, so `benchmark.goal_pack` and
+  `benchmark.calibration_report` are excused by the artifact itself rather than by an exception
+  someone maintains.
+
+- **`setspec.artifacts`** — `PUBLISHED_SCHEMAS`, `json_schema_for()`, `golden_payloads()`,
+  `golden_names()`, `payload_pair()`, `build_json_schema()` and `render_schema_document()`. The
+  first four are re-exported from `setspec` directly, matching spec §7's "schema artefacts" group:
+  an accessor that *returns* a version's artifacts is not itself versioned.
+
+  `PUBLISHED_SCHEMAS` records **exact** versions, unlike `SUPPORTED_SCHEMAS`, which records
+  supported majors. An artifact is a file that either exists or does not, so "highest minor known"
+  is the wrong shape for it — and a contract test asserts the two agree, so a schema that can be
+  negotiated but not validated, or validated but not negotiated, fails the build.
+
+- **Three contract jobs, one per published guarantee.** `schema-snapshot-diff` regenerates every
+  schema from its models and diffs it against the committed snapshot — ADR-0009 rule 7, *a schema
+  change without a version bump fails CI*, made mechanical and proven by a deliberate test-only
+  mutation. `golden-validation` checks every golden against its writer model, its reader model, the
+  published JSON Schema and a canonical round trip. `cross-version-compatibility` builds a synthetic
+  `1.1` document from each `full` golden and asserts a `1.0` reader accepts it, preserves the field
+  it does not know, and re-exports it intact — then builds a synthetic `2.0` and asserts the refusal
+  names both versions. They are separate jobs rather than steps because the three failures are acted
+  on differently: bump the version, fix the artifact, or go and warn a consumer.
+
+- **`install-check` now asserts the package data reaches the wheel.** Every test in this repository
+  passes against the source tree whether or not the schemas and goldens are built into the
+  distribution, so this job is the only one that would notice. It loads all eight schemas and their
+  goldens out of the *installed* wheel.
+
+- **`docs/schemas.md`** — the human-readable catalogue: what ships and where, every payload type
+  with its required-field count and its goldens, how to consume the artifacts from a repository that
+  shares no code with this one, and a table of every cross-field rule the JSON Schema **cannot**
+  express and the models therefore still own.
+
+- **`jsonschema` and `types-jsonschema` in the `dev` extra.** Test-only, and justified by the
+  assertion they exist for: a golden is validated against the *published document* a non-Python
+  consumer receives, not only against the model that generated it. Without a real validator that
+  check would be a hand-rolled subset of draft 2020-12 maintained in this repository — the thing
+  under test also serving as the thing testing it. Nothing under `src/` imports either, and the base
+  install still pulls in no validator. `requirements/ci.lock` regenerated.
+
 - **`metric_key` on `MetricValueFields`.** The model declared value, unit, aggregation, direction,
   sample count and dispersion — and nothing saying *which metric it is*. Both
   `BenchmarkResultFields.metrics` and `BenchmarkRunSummaryFields.aggregate_metrics` carry sequences
@@ -58,6 +135,14 @@ packaging and release standards §3.
 
 ### Changed
 
+- The five payload modules' status notes read **frozen (`1.0`)** rather than **draft (`1.0`)**, and
+  say what the freeze binds them to: a new optional field is a minor bump, and a removal, rename,
+  retype or tightening is a major — never an edit in place.
+- The two tests that asserted the draft state now assert the frozen one
+  (`test_no_registered_schema_is_still_draft`, `test_the_schema_is_frozen`). They are the same
+  guarantee read from the other side, and leaving them asserting `DRAFT_SCHEMAS == SUPPORTED_SCHEMAS`
+  would have made the freeze a change the test suite refused.
+
 - A bare reserved root is now refused by `validate_capability` and reported `False` by
   `is_known_capability`. `user` is a namespace, not a capability: a payload claiming
   `capability_id: "user"` has lost the identity that is the entire point of the namespace.
@@ -71,6 +156,7 @@ packaging and release standards §3.
   declaring `1.2` or later is unaffected. Producers on `1.1` must emit roots that exist at `1.1`.
 
 ### Fixed
+
 - **Coverage measured a directory nothing imports.** `[tool.coverage.run] source` named
   `src/setspec`, the source *path*, while CI installs the built distribution — so the moment the
   jobs stopped using an editable install, coverage reported **0 %** and failed the 95 % floor for a
@@ -88,6 +174,13 @@ packaging and release standards §3.
 - The package ships a `py.typed` marker, matching every other implemented package in the suite
   (`baseaicore`, `modelrack`, `sweatmeter`). Without it, `mypy --strict` in a consuming repository
   cannot see this package's types at all and treats every import from it as untyped.
+
+### Known gaps
+
+- `event.envelope` and `error.envelope` (Phase 3) and `prompt.record` / `prompt.manifest`
+  (Phase 5) are **not** part of this freeze, because they do not exist yet: a schema is frozen by
+  being published, and an unwritten one has nothing to publish. The freeze covers the eight payload
+  types that cross an application boundary today, not the eleven ADR-0009 anticipates.
 
 ## [0.2.0] — 2026-08-23
 

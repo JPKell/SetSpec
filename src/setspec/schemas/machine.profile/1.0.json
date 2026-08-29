@@ -1,0 +1,323 @@
+{
+  "$comment": "setspec machine.profile 1.0 — generated from the writer model.",
+  "$defs": {
+    "GpuProfileFields": {
+      "additionalProperties": true,
+      "description": "Static identity of one GPU, as a collector reported it.\n\nNested only — ``gpu.profile`` is not independently enveloped\n(ADR-0009 lists no such schema), so this\nis a plain :class:`~setspec.base.PayloadDefinition` rather than a generated pair; see that\nclass's docstring for why an embedded definition is always preserving.\n\nAttributes:\n    index: The device's 0-based enumeration position; also the value a benchmark result\n        attributes a per-device measurement to\n        (ADR-0027).\n    name: The marketing name, e.g. ``\"NVIDIA GeForce RTX 5060 Ti\"``.\n    uuid: The device's stable hardware identifier, unchanged across reboots. ``None`` when the\n        collector could not read one.\n    vram_total_bytes: Total device memory — never \"used\", which is telemetry.\n    driver_version: The installed driver version. A drift signal, not identity.\n    cuda_version: The CUDA/ROCm toolkit version. A drift signal, not identity.\n    compute_capability: The device's compute capability, e.g. ``\"12.0\"``.\n    vendor: Who makes the device; ``UNKNOWN`` is the honest default, not a guess.",
+      "properties": {
+        "compute_capability": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Compute Capability"
+        },
+        "cuda_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cuda Version"
+        },
+        "driver_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Driver Version"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "uuid": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uuid"
+        },
+        "vendor": {
+          "$ref": "#/$defs/WireEnum_GpuVendor_",
+          "default": "unknown"
+        },
+        "vram_total_bytes": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Vram Total Bytes"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "title": "GpuProfileFields",
+      "type": "object"
+    },
+    "StorageDeviceFields": {
+      "additionalProperties": true,
+      "description": "A storage device attached to the machine — provenance only, excluded from the fingerprint.\n\nAttributes:\n    name: The device name as the OS exposes it, e.g. ``\"nvme0n1\"``.\n    size_bytes: Total capacity.\n    model: The device's model string, if the OS exposes one.\n    rotational: ``True`` for spinning, ``False`` for solid state, ``None`` when the collector\n        could not tell — never guessed as ``False``.",
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "rotational": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rotational"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Size Bytes"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "StorageDeviceFields",
+      "type": "object"
+    },
+    "WireEnum_GpuVendor_": {
+      "description": "Who makes the device, which decides which telemetry interface can read it.\n\n``UNKNOWN`` is the honest default rather than a guess: a device the collector could not\nattribute is not an NVIDIA device by assumption. It is not part of the machine fingerprint —\nthe GPU's name already pins the model, and a collector that improved its vendor detection must\nnot thereby re-identify the machine.",
+      "enum": [
+        "nvidia",
+        "amd",
+        "intel",
+        "apple",
+        "unknown"
+      ],
+      "title": "GpuVendor",
+      "type": "string"
+    },
+    "WireSequence_GpuProfileFields_": {
+      "items": {
+        "$ref": "#/$defs/GpuProfileFields"
+      },
+      "type": "array"
+    },
+    "WireSequence_StorageDeviceFields_": {
+      "items": {
+        "$ref": "#/$defs/StorageDeviceFields"
+      },
+      "type": "array"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "architecture": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Architecture"
+    },
+    "cpu_model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Cpu Model"
+    },
+    "gpus": {
+      "$ref": "#/$defs/WireSequence_GpuProfileFields_",
+      "default": []
+    },
+    "hostname": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Hostname"
+    },
+    "kernel": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Kernel"
+    },
+    "logical_cores": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Logical Cores"
+    },
+    "machine_fingerprint": {
+      "minLength": 1,
+      "title": "Machine Fingerprint",
+      "type": "string"
+    },
+    "observed_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Observed At"
+    },
+    "os_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Os Name"
+    },
+    "os_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Os Version"
+    },
+    "physical_cores": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Physical Cores"
+    },
+    "python_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Python Version"
+    },
+    "ram_bytes": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Ram Bytes"
+    },
+    "storage": {
+      "$ref": "#/$defs/WireSequence_StorageDeviceFields_",
+      "default": []
+    }
+  },
+  "required": [
+    "machine_fingerprint",
+    "hostname",
+    "os_name",
+    "os_version",
+    "kernel",
+    "architecture",
+    "cpu_model"
+  ],
+  "title": "machine.profile",
+  "type": "object"
+}

@@ -1,0 +1,41 @@
+{
+  "criteria": [
+    {
+      "agreement": {
+        "bias": 0.62,
+        "graded_by": "the goal's author",
+        "kappa_w": 0.11,
+        "mae": 1.4,
+        "measured_at": "2026-08-20T18:30:00.000Z",
+        "n_anchor": 4,
+        "n_holdout": 8,
+        "rho": 0.19
+      },
+      "criterion_key": "vibe",
+      "inter_juror_alpha": null,
+      "judge_validity_factor": 0.11,
+      "weight": 1.0
+    }
+  ],
+  "goal_hash": "c81e728d9d4c2f63",
+  "goal_slug": "vibes",
+  "graded_by": "the goal's author",
+  "judge_set": {
+    "jurors": [
+      "ollama/qwen3.5:32b-instruct-q8_0@sha256:3f3f3f3f3f3f"
+    ],
+    "prompt_id": "goal.judge.vibes",
+    "prompt_sha256": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce",
+    "prompt_version": "1.0.0",
+    "remote": false
+  },
+  "judge_validity_factor": 0.11,
+  "measured_at": "2026-08-20T18:30:00.000Z",
+  "min_agreement": 0.4,
+  "n_anchor": 4,
+  "n_holdout": 8,
+  "partition_seed": 20260820,
+  "passed_gate": false,
+  "policy_version": "1.0.0",
+  "weighted_kappa_w": 0.11
+}

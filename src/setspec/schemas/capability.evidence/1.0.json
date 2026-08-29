@@ -1,0 +1,693 @@
+{
+  "$comment": "setspec capability.evidence 1.0 — generated from the writer model.",
+  "$defs": {
+    "CalibrationFields": {
+      "additionalProperties": true,
+      "description": "How closely the judge agreed with the person whose goal this is (ADR-0031 §3).\n\nThis is what separates an instrument from an opinion. Every field here describes the *judge's*\nerror against user-supplied ground truth, not the measured model's performance.\n\nAttributes:\n    kappa_w: Quadratic-weighted Cohen's kappa between the user's grades and the jury median\n        over the holdout, weighted across judged criteria. Ordinal-aware and chance-corrected;\n        legitimately negative when the judge disagrees with the user worse than chance would.\n    rho: Spearman rank correlation — whether the judge ranks as the user ranks.\n    mae: Mean absolute error in scale points. Non-negative, and in the units the user thinks\n        in rather than a coefficient they must interpret.\n    bias: Mean signed error. Negative means the judge grades harsher than the user, positive\n        more generously. Unbounded here because its scale is the criterion's, which this\n        payload does not carry.\n    n_anchor: Graded samples embedded in the judge prompt as exemplars. May be zero: a rubric\n        may be calibrated without few-shot anchoring.\n    n_holdout: Graded samples the judge was **never shown**, which is the only honest basis\n        for :attr:`kappa_w`. At least one, because agreement measured over nothing is not a\n        measurement — and it travels with the coefficient everywhere precisely so a reader\n        cannot see ``kappa_w`` without seeing what it was computed over.\n    graded_by: Free text the user supplied identifying the grader. Never an account name or\n        an address harvested from the environment.\n    measured_at: When the calibration was measured. Ages like evidence: a rubric calibrated a\n        year ago against a jury that has since changed is stale in the same sense a benchmark\n        result is.",
+      "properties": {
+        "bias": {
+          "title": "Bias",
+          "type": "number"
+        },
+        "graded_by": {
+          "minLength": 1,
+          "title": "Graded By",
+          "type": "string"
+        },
+        "kappa_w": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Kappa W",
+          "type": "number"
+        },
+        "mae": {
+          "minimum": 0.0,
+          "title": "Mae",
+          "type": "number"
+        },
+        "measured_at": {
+          "format": "date-time",
+          "title": "Measured At",
+          "type": "string"
+        },
+        "n_anchor": {
+          "minimum": 0,
+          "title": "N Anchor",
+          "type": "integer"
+        },
+        "n_holdout": {
+          "minimum": 1,
+          "title": "N Holdout",
+          "type": "integer"
+        },
+        "rho": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Rho",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kappa_w",
+        "rho",
+        "mae",
+        "bias",
+        "n_anchor",
+        "n_holdout",
+        "graded_by",
+        "measured_at"
+      ],
+      "title": "CalibrationFields",
+      "type": "object"
+    },
+    "ContributingMetricFields": {
+      "additionalProperties": true,
+      "description": "One benchmark metric's contribution to a capability score.\n\nAttributes:\n    metric_key: The metric's identifier within its benchmark, e.g. ``\"task_success\"``.\n    weight: This metric's weight in the score it contributed to. Positive — a zero or\n        negative weight would mean the metric contributed nothing or inverted another's\n        effect, either of which belongs in how the score was computed, not in a record of\n        what happened.\n    sample_count: Supported samples this metric contributed, matching the same\n        excluded-is-not-counted rule as every other sample count in this package\n        (ADR-0016 §6).",
+      "properties": {
+        "metric_key": {
+          "minLength": 1,
+          "title": "Metric Key",
+          "type": "string"
+        },
+        "sample_count": {
+          "minimum": 0,
+          "title": "Sample Count",
+          "type": "integer"
+        },
+        "weight": {
+          "exclusiveMinimum": 0.0,
+          "title": "Weight",
+          "type": "number"
+        }
+      },
+      "required": [
+        "metric_key",
+        "weight",
+        "sample_count"
+      ],
+      "title": "ContributingMetricFields",
+      "type": "object"
+    },
+    "EnvironmentFields": {
+      "additionalProperties": true,
+      "description": "Provider and drift-sensitive environment facts at the moment of measurement.\n\nUnifies two bullets that\nMachine Identity §6 and\nADR-0022 §1 describe separately\nbut with identical content — \"provider kind + provider version\" and \"GPU driver, CUDA, OS\nversion at measurement\" — into the one nested object ADR-0022 already names ``environment`` on\n``capability.evidence``, so a benchmark result and the evidence aggregated from it carry\nenvironment facts in the same shape rather than two shapes a consumer has to reconcile.\n\nEvery field but the provider's own identity is a **drift signal, not identity**: a driver\nupgrade or an OS patch must never re-identify a machine (that is the machine fingerprint's\njob, and it deliberately excludes all of these), but it does reduce confidence in performance\nevidence measured before it\n(ADR-0017's\n``environment_factor``). Recording them is what makes that reduction computable at all.\n\nAttributes:\n    provider_kind: Which kind of provider served the model for this measurement.\n    provider_version: The provider's own version string, e.g. ``\"0.32.13\"``.\n    gpu_driver_version: A drift signal; ``None`` when no GPU was involved.\n    cuda_version: The CUDA/ROCm toolkit version. A drift signal.\n    os_version: A drift signal.",
+      "properties": {
+        "cuda_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cuda Version"
+        },
+        "gpu_driver_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gpu Driver Version"
+        },
+        "os_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Os Version"
+        },
+        "provider_kind": {
+          "$ref": "#/$defs/WireEnum_ProviderKind_"
+        },
+        "provider_version": {
+          "minLength": 1,
+          "title": "Provider Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider_kind",
+        "provider_version"
+      ],
+      "title": "EnvironmentFields",
+      "type": "object"
+    },
+    "JudgeSetFields": {
+      "additionalProperties": true,
+      "description": "The instrument that produced a judged score — a hard-separation input (ADR-0032 §4).\n\nA different jury is a different instrument, and therefore a different measurement. This is\nrecorded rather than summarized because a consumer must be able to decide comparability\nwithout asking the producer, exactly as it does for a benchmark version.\n\nAttributes:\n    jurors: Canonical model IDs of the jury members, in the order they were polled. Two or\n        more is the documented default; one is permitted and loses the inter-juror agreement\n        that distinguishes bias from noise, which is why the count is visible here rather\n        than folded into a summary figure.\n    prompt_id: The judge prompt record's ID (ADR-0012 — a judge rubric is a prompt record).\n    prompt_version: That record's semantic version.\n    prompt_sha256: That record's canonical hash, so a consumer can separate on the prompt\n        without holding the prompt.\n    remote: Whether any juror ran outside the measuring machine. Locally-judged and\n        remotely-judged results are **separated**, never merged (ADR-0031 §4), so this is a\n        comparability input and not a footnote.",
+      "properties": {
+        "jurors": {
+          "$ref": "#/$defs/WireSequence_str_",
+          "default": []
+        },
+        "prompt_id": {
+          "minLength": 1,
+          "title": "Prompt Id",
+          "type": "string"
+        },
+        "prompt_sha256": {
+          "minLength": 1,
+          "title": "Prompt Sha256",
+          "type": "string"
+        },
+        "prompt_version": {
+          "minLength": 1,
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "remote": {
+          "title": "Remote",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "prompt_id",
+        "prompt_version",
+        "prompt_sha256",
+        "remote"
+      ],
+      "title": "JudgeSetFields",
+      "type": "object"
+    },
+    "ModelIdentityFields": {
+      "additionalProperties": true,
+      "description": "Field definitions for ``model.identity``; use :data:`ModelIdentityOut` /\n:data:`ModelIdentityIn`.\n\n:attr:`canonical_id` and :attr:`identity_confidence` are materialized rather than left for a\nreader to derive, so a consumer can display or index by them without reconstructing a\n:class:`baseaicore.ModelIdentity`. Both are still validated against the identity triple on\nevery construction — see :meth:`_check_identity_coherence` — so \"provenance completeness\nenforced by the schema\" (Phase 2 gold standard) applies to the derived fields too, not only\nthe fields nothing computes.\n\nAttributes:\n    provider_kind: Which kind of provider serves these weights ([ADR-0008]\n        (0008 canonical model identity)). Reuses\n        :class:`baseaicore.ProviderKind` directly rather than a shadow enum, so a new provider\n        kind reaches this schema the moment BaseAiCore adds it.\n    provider_model_name: Exactly as the provider names it, case and punctuation preserved.\n    artifact_digest: ``\"sha256:\"`` + 64 lowercase hex characters, or ``None`` when the\n        provider exposes none.\n    identity_confidence: ``digest`` iff ``artifact_digest`` is present, ``name_only``\n        otherwise — checked, not merely documented.\n    canonical_id: ``{provider_kind}/{provider_model_name}@{digest_short}``\n        (ADR-0024). Lossy and\n        display-only; never parsed back into its parts.\n    observed_at: When this descriptor snapshot was read from the provider.\n    family: The model family name, e.g. ``\"qwen3.5\"``.\n    architecture: The architecture name, e.g. ``\"transformer\"``, ``\"mamba\"``.\n    parameter_count: Total parameter count.\n    active_parameter_count: MoE active parameters per token; equal to\n        ``parameter_count`` for a dense model.\n    expert_count: Number of experts, for a mixture-of-experts model.\n    quantization: Weight quantization, e.g. ``\"Q8_0\"``.\n    weight_format: File format, e.g. ``\"gguf\"``, ``\"safetensors\"``.\n    size_bytes: On-disk size of the weights.\n    max_context: The context length the model *advertises* — not the context a provider is\n        configured to serve, which is ``execution.served_context`` on a benchmark result\n        (ADR-0023 §4).\n    embedding_dim: Hidden/embedding dimension.\n    layers: Transformer layer count.\n    attention_heads: Attention head count.\n    kv_heads: Key/value head count.\n    head_dim: Dimension of each attention head.\n    vocab_size: Tokenizer vocabulary size.\n    rope_config: RoPE scaling configuration, in the provider's own shape.\n    sliding_window: Sliding-attention window size, if the architecture uses one.\n    declared_capabilities: What the provider *claims* this model can do — never conflated\n        with a measured capability from ``capability.evidence``.\n    license_text: The model's license, if the provider exposes one.",
+      "properties": {
+        "active_parameter_count": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Active Parameter Count"
+        },
+        "architecture": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Architecture"
+        },
+        "artifact_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Digest"
+        },
+        "attention_heads": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Attention Heads"
+        },
+        "canonical_id": {
+          "minLength": 1,
+          "title": "Canonical Id",
+          "type": "string"
+        },
+        "declared_capabilities": {
+          "$ref": "#/$defs/WireSequence_WireEnum_ModelCapabilityFlag__",
+          "default": []
+        },
+        "embedding_dim": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Embedding Dim"
+        },
+        "expert_count": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Expert Count"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family"
+        },
+        "head_dim": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Head Dim"
+        },
+        "identity_confidence": {
+          "$ref": "#/$defs/WireEnum_IdentityConfidence_"
+        },
+        "kv_heads": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Kv Heads"
+        },
+        "layers": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Layers"
+        },
+        "license_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "License Text"
+        },
+        "max_context": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Max Context"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "parameter_count": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Parameter Count"
+        },
+        "provider_kind": {
+          "$ref": "#/$defs/WireEnum_ProviderKind_"
+        },
+        "provider_model_name": {
+          "minLength": 1,
+          "title": "Provider Model Name",
+          "type": "string"
+        },
+        "quantization": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quantization"
+        },
+        "rope_config": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rope Config"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Size Bytes"
+        },
+        "sliding_window": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Sliding Window"
+        },
+        "vocab_size": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "unsupported"
+            }
+          ],
+          "title": "Vocab Size"
+        },
+        "weight_format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weight Format"
+        }
+      },
+      "required": [
+        "provider_kind",
+        "provider_model_name",
+        "identity_confidence",
+        "canonical_id",
+        "observed_at"
+      ],
+      "title": "ModelIdentityFields",
+      "type": "object"
+    },
+    "WireEnum_IdentityConfidence_": {
+      "description": "How firmly an identity pins down a specific set of weights.\n\nStored alongside every measurement. A ``NAME_ONLY`` result carries a permanent caveat: the\nprovider exposed no digest, so it can never be proven later to describe the same weights —\na tag such as ``qwen3.5:latest`` can be repointed at any time. LoadCoach reduces evidence\nconfidence for it and FreeWeight shows it in the UI\n([ADR-0017](../../docs/adr/0017-benchmark-confidence-and-freshness.md)).",
+      "enum": [
+        "digest",
+        "name_only"
+      ],
+      "title": "IdentityConfidence",
+      "type": "string"
+    },
+    "WireEnum_ModelCapabilityFlag_": {
+      "description": "A capability a provider *claims* a model has, distinct from a measured capability.\n\nFreeWeight's benchmark results record what a model can *demonstrably* do; this flag records\nonly what the provider *says* it can do. The two are never conflated\n(``docs/architecture/canonical-model-identity.md`` §3).",
+      "enum": [
+        "tools",
+        "vision",
+        "thinking",
+        "structured_output",
+        "embedding"
+      ],
+      "title": "ModelCapabilityFlag",
+      "type": "string"
+    },
+    "WireEnum_ProviderKind_": {
+      "description": "The kind of provider serving a model — not the endpoint it is served from.\n\nKind rather than address, because the same weights served by Ollama and by vLLM behave\ndifferently enough (templating, sampling defaults, KV handling) that their measurements are\nnot interchangeable, while a port or hostname change is a deployment detail that must not\nfragment a model's history.\n\nAdding a member is a backwards-compatible change; renaming one is not, because the value is\npersisted and appears in every canonical ID.",
+      "enum": [
+        "ollama",
+        "openai_compatible",
+        "llamacpp",
+        "vllm",
+        "fake"
+      ],
+      "title": "ProviderKind",
+      "type": "string"
+    },
+    "WireSequence_ContributingMetricFields_": {
+      "items": {
+        "$ref": "#/$defs/ContributingMetricFields"
+      },
+      "type": "array"
+    },
+    "WireSequence_WireEnum_ModelCapabilityFlag__": {
+      "items": {
+        "$ref": "#/$defs/WireEnum_ModelCapabilityFlag_"
+      },
+      "type": "array"
+    },
+    "WireSequence_str_": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "benchmark_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Benchmark Versions",
+      "type": "object"
+    },
+    "calibration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CalibrationFields"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "capability_id": {
+      "minLength": 1,
+      "title": "Capability Id",
+      "type": "string"
+    },
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.05,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "contributing_metrics": {
+      "$ref": "#/$defs/WireSequence_ContributingMetricFields_",
+      "default": []
+    },
+    "dataset_hashes": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Dataset Hashes",
+      "type": "object"
+    },
+    "dispersion": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Dispersion"
+    },
+    "environment": {
+      "$ref": "#/$defs/EnvironmentFields"
+    },
+    "excluded_count": {
+      "minimum": 0,
+      "title": "Excluded Count",
+      "type": "integer"
+    },
+    "goal_hash": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Goal Hash"
+    },
+    "goal_pack_version": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Goal Pack Version"
+    },
+    "judge_set": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JudgeSetFields"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "judge_validity_factor": {
+      "default": 1.0,
+      "maximum": 1.0,
+      "minimum": 0.05,
+      "title": "Judge Validity Factor",
+      "type": "number"
+    },
+    "machine_fingerprint": {
+      "minLength": 1,
+      "title": "Machine Fingerprint",
+      "type": "string"
+    },
+    "measured_at": {
+      "format": "date-time",
+      "title": "Measured At",
+      "type": "string"
+    },
+    "model": {
+      "$ref": "#/$defs/ModelIdentityFields"
+    },
+    "policy_version": {
+      "minLength": 1,
+      "title": "Policy Version",
+      "type": "string"
+    },
+    "prompt_subset_hashes": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Prompt Subset Hashes",
+      "type": "object"
+    },
+    "runtime_profile_hash": {
+      "minLength": 1,
+      "title": "Runtime Profile Hash",
+      "type": "string"
+    },
+    "sample_count": {
+      "minimum": 0,
+      "title": "Sample Count",
+      "type": "integer"
+    },
+    "score": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Score",
+      "type": "number"
+    },
+    "score_method_mix": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Score Method Mix"
+    },
+    "source_run_ids": {
+      "$ref": "#/$defs/WireSequence_str_",
+      "default": []
+    },
+    "uncalibrated": {
+      "default": false,
+      "title": "Uncalibrated",
+      "type": "boolean"
+    },
+    "vocabulary_version": {
+      "minLength": 1,
+      "title": "Vocabulary Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "model",
+    "runtime_profile_hash",
+    "machine_fingerprint",
+    "capability_id",
+    "score",
+    "confidence",
+    "sample_count",
+    "excluded_count",
+    "dispersion",
+    "measured_at",
+    "computed_at",
+    "policy_version",
+    "vocabulary_version",
+    "environment"
+  ],
+  "title": "capability.evidence",
+  "type": "object"
+}

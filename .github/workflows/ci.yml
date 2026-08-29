@@ -91,6 +91,44 @@ jobs:
       - run: pip install . --no-deps
       - run: pytest -m contract
 
+  # The three published guarantees get their own jobs rather than sharing `contracts`' single
+  # red mark, because each answers a different question and the answers are acted on differently:
+  # a snapshot diff means "bump the version", a golden failure means "the artifact is wrong", and
+  # a cross-version failure means "a consumer at another version just broke".
+  schema-snapshot-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install --require-hashes -r requirements/ci.lock
+      - run: pip install . --no-deps
+      # ADR-0009 rule 7: a schema change without a version bump fails CI. The test regenerates
+      # every published schema from its writer model and diffs it against the committed snapshot.
+      - run: pytest tests/contract/test_schema_snapshots.py -m contract
+
+  golden-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install --require-hashes -r requirements/ci.lock
+      - run: pip install . --no-deps
+      - run: pytest tests/contract/test_goldens.py -m contract
+
+  cross-version-compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install --require-hashes -r requirements/ci.lock
+      - run: pip install . --no-deps
+      # Testing Standards §8.3, proven by the repository that makes the promise: a v1.0 reader
+      # accepts a synthetic v1.1 golden without loss and refuses a synthetic v2.0 by major.
+      - run: pytest tests/contract/test_cross_version.py -m contract
+
   security:
     runs-on: ubuntu-latest
     steps:
@@ -147,4 +185,19 @@ jobs:
           import pathlib, setspec
           marker = pathlib.Path(setspec.__file__).parent / 'py.typed'
           assert marker.is_file(), 'py.typed missing from the installed wheel'
+          "
+      # The schemas and goldens are package data (ADR-0009 rule 7), and package data is exactly
+      # what a build is most likely to leave out silently: every test in this repository passes
+      # against the source tree whether or not the files reach the wheel. This is the only job
+      # that would notice, which is why it asserts against the *installed* distribution.
+      - name: schemas and goldens ship in the wheel
+        run: |
+          python -c "
+          from setspec import PUBLISHED_SCHEMAS, golden_payloads, json_schema_for
+          for schema, versions in PUBLISHED_SCHEMAS.items():
+              for version in versions:
+                  assert json_schema_for(schema, version)['title'] == schema
+                  goldens = golden_payloads(schema, version)
+                  assert len(goldens) >= 3, f'{schema} {version} ships {len(goldens)} goldens'
+          print(f'{len(PUBLISHED_SCHEMAS)} schemas with goldens loaded from the installed wheel')
           "

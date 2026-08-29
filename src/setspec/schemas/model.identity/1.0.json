@@ -1,0 +1,299 @@
+{
+  "$comment": "setspec model.identity 1.0 — generated from the writer model.",
+  "$defs": {
+    "WireEnum_IdentityConfidence_": {
+      "description": "How firmly an identity pins down a specific set of weights.\n\nStored alongside every measurement. A ``NAME_ONLY`` result carries a permanent caveat: the\nprovider exposed no digest, so it can never be proven later to describe the same weights —\na tag such as ``qwen3.5:latest`` can be repointed at any time. LoadCoach reduces evidence\nconfidence for it and FreeWeight shows it in the UI\n([ADR-0017](../../docs/adr/0017-benchmark-confidence-and-freshness.md)).",
+      "enum": [
+        "digest",
+        "name_only"
+      ],
+      "title": "IdentityConfidence",
+      "type": "string"
+    },
+    "WireEnum_ModelCapabilityFlag_": {
+      "description": "A capability a provider *claims* a model has, distinct from a measured capability.\n\nFreeWeight's benchmark results record what a model can *demonstrably* do; this flag records\nonly what the provider *says* it can do. The two are never conflated\n(``docs/architecture/canonical-model-identity.md`` §3).",
+      "enum": [
+        "tools",
+        "vision",
+        "thinking",
+        "structured_output",
+        "embedding"
+      ],
+      "title": "ModelCapabilityFlag",
+      "type": "string"
+    },
+    "WireEnum_ProviderKind_": {
+      "description": "The kind of provider serving a model — not the endpoint it is served from.\n\nKind rather than address, because the same weights served by Ollama and by vLLM behave\ndifferently enough (templating, sampling defaults, KV handling) that their measurements are\nnot interchangeable, while a port or hostname change is a deployment detail that must not\nfragment a model's history.\n\nAdding a member is a backwards-compatible change; renaming one is not, because the value is\npersisted and appears in every canonical ID.",
+      "enum": [
+        "ollama",
+        "openai_compatible",
+        "llamacpp",
+        "vllm",
+        "fake"
+      ],
+      "title": "ProviderKind",
+      "type": "string"
+    },
+    "WireSequence_WireEnum_ModelCapabilityFlag__": {
+      "items": {
+        "$ref": "#/$defs/WireEnum_ModelCapabilityFlag_"
+      },
+      "type": "array"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "active_parameter_count": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Active Parameter Count"
+    },
+    "architecture": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Architecture"
+    },
+    "artifact_digest": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Artifact Digest"
+    },
+    "attention_heads": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Attention Heads"
+    },
+    "canonical_id": {
+      "minLength": 1,
+      "title": "Canonical Id",
+      "type": "string"
+    },
+    "declared_capabilities": {
+      "$ref": "#/$defs/WireSequence_WireEnum_ModelCapabilityFlag__",
+      "default": []
+    },
+    "embedding_dim": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Embedding Dim"
+    },
+    "expert_count": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Expert Count"
+    },
+    "family": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Family"
+    },
+    "head_dim": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Head Dim"
+    },
+    "identity_confidence": {
+      "$ref": "#/$defs/WireEnum_IdentityConfidence_"
+    },
+    "kv_heads": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Kv Heads"
+    },
+    "layers": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Layers"
+    },
+    "license_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "License Text"
+    },
+    "max_context": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Max Context"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "parameter_count": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Parameter Count"
+    },
+    "provider_kind": {
+      "$ref": "#/$defs/WireEnum_ProviderKind_"
+    },
+    "provider_model_name": {
+      "minLength": 1,
+      "title": "Provider Model Name",
+      "type": "string"
+    },
+    "quantization": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Quantization"
+    },
+    "rope_config": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rope Config"
+    },
+    "size_bytes": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Size Bytes"
+    },
+    "sliding_window": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Sliding Window"
+    },
+    "vocab_size": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Vocab Size"
+    },
+    "weight_format": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Weight Format"
+    }
+  },
+  "required": [
+    "provider_kind",
+    "provider_model_name",
+    "identity_confidence",
+    "canonical_id",
+    "observed_at"
+  ],
+  "title": "model.identity",
+  "type": "object"
+}

@@ -1,0 +1,58 @@
+{
+  "criteria": [
+    {
+      "agreement": {
+        "bias": -0.13,
+        "graded_by": "the goal's author",
+        "kappa_w": 0.74,
+        "mae": 0.42,
+        "measured_at": "2026-08-20T17:02:11.004Z",
+        "n_anchor": 6,
+        "n_holdout": 18,
+        "rho": 0.81
+      },
+      "criterion_key": "house_voice",
+      "inter_juror_alpha": 0.69,
+      "judge_validity_factor": 0.64,
+      "weight": 0.4
+    },
+    {
+      "agreement": {
+        "bias": 0.08,
+        "graded_by": "the goal's author",
+        "kappa_w": 0.58,
+        "mae": 0.55,
+        "measured_at": "2026-08-20T17:02:11.004Z",
+        "n_anchor": 6,
+        "n_holdout": 18,
+        "rho": 0.63
+      },
+      "criterion_key": "would_ship_it",
+      "inter_juror_alpha": 0.71,
+      "judge_validity_factor": 0.5,
+      "weight": 0.2
+    }
+  ],
+  "goal_hash": "7b41e6c05a9d283f1c0e4b8a6d29f537",
+  "goal_slug": "noir_tech_voice",
+  "graded_by": "the goal's author",
+  "judge_set": {
+    "jurors": [
+      "ollama/qwen3.5:32b-instruct-q8_0@sha256:3f3f3f3f3f3f",
+      "llamacpp/gemma-3-12b-it-Q4_K_M.gguf@sha256:a1a1a1a1a1a1"
+    ],
+    "prompt_id": "goal.judge.noir_tech_voice",
+    "prompt_sha256": "2c624232cdd221771294dfbb310aca000a0df6ac8b66b696d90ef06fdefb64a3",
+    "prompt_version": "1.2.0",
+    "remote": false
+  },
+  "judge_validity_factor": 0.64,
+  "measured_at": "2026-08-20T17:02:11.004Z",
+  "min_agreement": 0.4,
+  "n_anchor": 6,
+  "n_holdout": 18,
+  "partition_seed": 20260820,
+  "passed_gate": true,
+  "policy_version": "1.0.0",
+  "weighted_kappa_w": 0.6867
+}

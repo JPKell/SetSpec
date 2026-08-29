@@ -1,0 +1,129 @@
+{
+  "application": {
+    "git_commit": "4c9f2a1d8b3e5f70a2c4d6e8091b3c5d7e9f0a1b",
+    "name": "freeweight",
+    "version": "1.0.0rc1"
+  },
+  "completed_at": "2026-08-21T09:15:00.000Z",
+  "environment": {
+    "cuda_version": null,
+    "gpu_driver_version": null,
+    "os_version": null,
+    "provider_kind": "llamacpp",
+    "provider_version": "b4231"
+  },
+  "execution": {
+    "effective_parameters": {},
+    "repetitions": 3,
+    "sample_count": 3,
+    "seed": "nondeterministic",
+    "served_context": 0,
+    "served_context_source": "assumed"
+  },
+  "machine_fingerprint": "1a2b3c4d5e6f70819283a4b5c6d7e8f9",
+  "machine_profile": {
+    "architecture": "x86_64",
+    "cpu_model": null,
+    "gpus": [
+      {
+        "compute_capability": null,
+        "cuda_version": null,
+        "driver_version": null,
+        "index": 0,
+        "name": null,
+        "uuid": null,
+        "vendor": "unknown",
+        "vram_total_bytes": "unsupported"
+      }
+    ],
+    "hostname": "sandbox",
+    "kernel": null,
+    "logical_cores": "unsupported",
+    "machine_fingerprint": "1a2b3c4d5e6f70819283a4b5c6d7e8f9",
+    "observed_at": "2026-08-21T09:10:00.000Z",
+    "os_name": "Linux",
+    "os_version": null,
+    "physical_cores": "unsupported",
+    "python_version": "3.12.11",
+    "ram_bytes": "unsupported",
+    "storage": []
+  },
+  "measurement_class": "n/a",
+  "metrics": [
+    {
+      "aggregation": "mean",
+      "dispersion": 0.58,
+      "higher_is_better": true,
+      "metric_key": "task_success",
+      "sample_count": 3,
+      "unit": "ratio",
+      "value": 0.67
+    },
+    {
+      "aggregation": "mean",
+      "dispersion": "unsupported",
+      "higher_is_better": false,
+      "metric_key": "energy_per_token_j",
+      "sample_count": 0,
+      "unit": "joules_per_token",
+      "value": "unsupported"
+    },
+    {
+      "aggregation": "max",
+      "dispersion": "unsupported",
+      "higher_is_better": false,
+      "metric_key": "peak_vram_bytes",
+      "sample_count": 0,
+      "unit": "bytes",
+      "value": "unsupported"
+    }
+  ],
+  "model": {
+    "active_parameter_count": "unsupported",
+    "architecture": null,
+    "artifact_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "attention_heads": "unsupported",
+    "canonical_id": "llamacpp/gemma-3-12b-it-Q4_K_M.gguf@sha256:a1a1a1a1a1a1",
+    "declared_capabilities": [],
+    "embedding_dim": "unsupported",
+    "expert_count": "unsupported",
+    "family": null,
+    "head_dim": "unsupported",
+    "identity_confidence": "digest",
+    "kv_heads": "unsupported",
+    "layers": "unsupported",
+    "license_text": null,
+    "max_context": "unsupported",
+    "observed_at": "2026-08-21T09:14:02.318Z",
+    "parameter_count": "unsupported",
+    "provider_kind": "llamacpp",
+    "provider_model_name": "gemma-3-12b-it-Q4_K_M.gguf",
+    "quantization": null,
+    "rope_config": null,
+    "size_bytes": "unsupported",
+    "sliding_window": "unsupported",
+    "vocab_size": "unsupported",
+    "weight_format": null
+  },
+  "reproducibility": {
+    "fingerprint_document": {},
+    "reproducibility_fingerprint": "f0e1d2c3b4a59687"
+  },
+  "runtime_profile": {},
+  "runtime_profile_hash": "e06e92b4d4803b3b",
+  "started_at": "2026-08-21T09:14:00.000Z",
+  "status": "completed",
+  "suite": {
+    "manifest_hash": "b7f3c1a95e2d4086",
+    "prompt_subset_hash": "0a4d2c8e91b7f635",
+    "suite_key": "native.instruction_following",
+    "suite_version": "1.0.0"
+  },
+  "telemetry_summary": {
+    "max_temperature_c": "unsupported",
+    "mean_power_watts": "unsupported",
+    "peak_power_watts": "unsupported",
+    "peak_vram_bytes": "unsupported",
+    "throttled": null
+  }
+}

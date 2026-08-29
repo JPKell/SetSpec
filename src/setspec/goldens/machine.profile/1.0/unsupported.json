@@ -1,0 +1,27 @@
+{
+  "architecture": "x86_64",
+  "cpu_model": null,
+  "gpus": [
+    {
+      "compute_capability": null,
+      "cuda_version": null,
+      "driver_version": null,
+      "index": 0,
+      "name": null,
+      "uuid": null,
+      "vendor": "unknown",
+      "vram_total_bytes": "unsupported"
+    }
+  ],
+  "hostname": "sandbox",
+  "kernel": null,
+  "logical_cores": "unsupported",
+  "machine_fingerprint": "1a2b3c4d5e6f70819283a4b5c6d7e8f9",
+  "observed_at": "2026-08-21T09:10:00.000Z",
+  "os_name": "Linux",
+  "os_version": null,
+  "physical_cores": "unsupported",
+  "python_version": "3.12.11",
+  "ram_bytes": "unsupported",
+  "storage": []
+}

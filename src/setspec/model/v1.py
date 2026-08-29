@@ -6,12 +6,15 @@ Imports pydantic and :mod:`baseaicore`; performs no I/O. Exchange form of
 because ADR-0022 §1 always
 carries them together as ``capability.evidence.model``.
 
-**Status: draft (`1.0`).** Registered in :data:`setspec.envelope.SUPPORTED_SCHEMAS` so FreeWeight
-has a concrete model to build against, but not yet frozen — see
-[development plan Phase 2](../../../docs/packages/setspec/development-plan.md) and
-[Phase 4](../../../docs/packages/setspec/development-plan.md), which promotes this to `1.0` only
-after FreeWeight has produced real results against it. A field may still be added, tightened or
-reshaped by that promotion without a major version bump signalling it in advance.
+**Status: frozen (`1.0`).**
+[Phase 4](../../../docs/packages/setspec/development-plan.md) promoted this from draft after
+FreeWeight produced real results against it, and
+:data:`setspec.envelope.DRAFT_SCHEMAS` no longer names it. From here the ordinary rules apply
+without exception: a new optional field is a **minor** bump, and removing, renaming, retyping or
+tightening one is a **major** — never an edit to this module at `1.0`. The committed JSON Schema
+in ``setspec/schemas/model.identity/1.0.json`` is what makes that enforceable rather than
+aspirational: changing a field here without publishing a new version fails the snapshot contract
+test (ADR-0009 rule 7).
 
 Deliberately omitted: :attr:`baseaicore.ModelDescriptor.raw`, the untouched provider response.
 It carries no contract — its own docstring says nothing above the normalizer may read it for

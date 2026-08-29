@@ -1,0 +1,130 @@
+{
+  "aggregate_metrics": [
+    {
+      "aggregation": "mean",
+      "dispersion": 0.36,
+      "higher_is_better": true,
+      "metric_key": "task_success",
+      "sample_count": 20,
+      "unit": "ratio",
+      "value": 0.85
+    },
+    {
+      "aggregation": "median",
+      "dispersion": 3.4,
+      "higher_is_better": true,
+      "metric_key": "decode_tokens_per_second",
+      "sample_count": 20,
+      "unit": "tokens_per_second",
+      "value": 48.2
+    }
+  ],
+  "application": {
+    "git_commit": "4c9f2a1d8b3e5f70a2c4d6e8091b3c5d7e9f0a1b",
+    "name": "freeweight",
+    "version": "1.0.0rc1"
+  },
+  "completed_at": "2026-08-21T09:19:41.902Z",
+  "created_at": "2026-08-21T09:13:55.000Z",
+  "environment": {
+    "cuda_version": "13.0",
+    "gpu_driver_version": "580.65.06",
+    "os_version": "Ubuntu 26.04 LTS",
+    "provider_kind": "ollama",
+    "provider_version": "0.32.13"
+  },
+  "machine_fingerprint": "9d1c4a5f2b7e83c04e6a1f9b2d5c7e83",
+  "model": {
+    "active_parameter_count": 32000000000,
+    "architecture": "transformer",
+    "artifact_digest": "sha256:3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+    "attention_heads": 40,
+    "canonical_id": "ollama/qwen3.5:32b-instruct-q8_0@sha256:3f3f3f3f3f3f",
+    "declared_capabilities": [
+      "tools",
+      "thinking",
+      "structured_output"
+    ],
+    "embedding_dim": 5120,
+    "expert_count": "unsupported",
+    "family": "qwen3.5",
+    "head_dim": 128,
+    "identity_confidence": "digest",
+    "kv_heads": 8,
+    "layers": 64,
+    "license_text": "Apache-2.0",
+    "max_context": 131072,
+    "observed_at": "2026-08-21T09:14:02.318Z",
+    "parameter_count": 32000000000,
+    "provider_kind": "ollama",
+    "provider_model_name": "qwen3.5:32b-instruct-q8_0",
+    "quantization": "Q8_0",
+    "rope_config": {
+      "factor": 4.0,
+      "type": "yarn"
+    },
+    "size_bytes": 34359738368,
+    "sliding_window": 4096,
+    "vocab_size": 151936,
+    "weight_format": "gguf"
+  },
+  "reproducibility": {
+    "fingerprint_document": {
+      "dataset_hashes": {
+        "tool_calls_v3": "9e2b7c4a1f508d63"
+      },
+      "effective_parameters": {
+        "max_tokens": 512,
+        "temperature": 0.0,
+        "top_p": 1.0
+      },
+      "machine_fingerprint": "9d1c4a5f2b7e83c04e6a1f9b2d5c7e83",
+      "manifest_hash": "d41c8f9a2b6e0357",
+      "model": "ollama/qwen3.5:32b-instruct-q8_0@sha256:3f3f3f3f3f3f",
+      "prompt_subset_hash": "3c7e1a9b5d204f81",
+      "runtime_profile_hash": "17c2fc02b32ad4ee",
+      "seed": 20260821,
+      "suite_key": "native.tool_use",
+      "suite_version": "1.2.0"
+    },
+    "reproducibility_fingerprint": "f0e1d2c3b4a59687"
+  },
+  "runtime_profile": {
+    "batch_size": 512,
+    "context_size": 8192,
+    "flash_attention": true,
+    "gpu_layers": 48,
+    "keep_alive": "5m",
+    "kv_cache_precision": "q8_0",
+    "provider_options": {
+      "num_predict": 256
+    },
+    "threads": 8
+  },
+  "runtime_profile_hash": "17c2fc02b32ad4ee",
+  "started_at": "2026-08-21T09:14:00.000Z",
+  "status": "completed",
+  "suite": {
+    "category": "tool_use",
+    "dataset_hashes": {
+      "tool_calls_v3": "9e2b7c4a1f508d63"
+    },
+    "manifest_hash": "d41c8f9a2b6e0357",
+    "prompt_subset_hash": "3c7e1a9b5d204f81",
+    "prompts_used": [
+      {
+        "prompt_id": "tool_use.single_call",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "version": "2.1.0"
+      },
+      {
+        "prompt_id": "tool_use.chained_call",
+        "sha256": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+        "version": "1.4.0"
+      }
+    ],
+    "runner": "native",
+    "suite_key": "native.tool_use",
+    "suite_version": "1.2.0"
+  }
+}

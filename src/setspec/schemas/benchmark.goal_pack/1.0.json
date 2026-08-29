@@ -1,0 +1,267 @@
+{
+  "$comment": "setspec benchmark.goal_pack 1.0 — generated from the writer model.",
+  "$defs": {
+    "GoalCriterionFields": {
+      "additionalProperties": true,
+      "description": "One measurable quality within a goal, and how it is scored.\n\nAttributes:\n    key: Stable identifier within the goal. Never renamed — a rename is a new criterion,\n        because a renamed criterion whose history merged with the old one would silently\n        compare two different measurements.\n    name: Human-readable label. Display only, and deliberately **not** a ``goal_hash`` input:\n        renaming a criterion for readability must not separate a year of results, while\n        changing what it checks must.\n    rung: Which ladder rung scores it.\n    weight: Its share of the composite, positive and summing to ``1`` across the goal.\n    is_gate: Whether failing it zeroes the sample's composite outright. For disqualifying\n        properties — a forbidden phrase, invalid JSON — rather than gradual ones.\n    rule_type: For a ``rule`` or ``reference`` criterion, which check runs, e.g.\n        ``\"forbidden_phrases\"``. ``None`` for ``human`` and ``judge``.\n    scale_points: For a ``judge`` or ``human`` criterion, the ordinal scale's size — 3, 5 or\n        7. ``None`` for a deterministic criterion.\n    has_scale_descriptors: Whether the ordinal scale carries anchoring descriptors. Always\n        ``True`` on a valid judged criterion: an unanchored scale (\"rate the tone 1-5\")\n        reliably produces agreement near zero, so FreeWeight refuses one at authoring time.\n        Carried on the wire so an importer can see the rubric was anchored without holding\n        the descriptors themselves.",
+      "properties": {
+        "has_scale_descriptors": {
+          "default": false,
+          "title": "Has Scale Descriptors",
+          "type": "boolean"
+        },
+        "is_gate": {
+          "default": false,
+          "title": "Is Gate",
+          "type": "boolean"
+        },
+        "key": {
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "rule_type": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Type"
+        },
+        "rung": {
+          "$ref": "#/$defs/WireEnum_ScoringRung_"
+        },
+        "scale_points": {
+          "anyOf": [
+            {
+              "maximum": 7,
+              "minimum": 3,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scale Points"
+        },
+        "weight": {
+          "exclusiveMinimum": 0.0,
+          "maximum": 1.0,
+          "title": "Weight",
+          "type": "number"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "rung",
+        "weight"
+      ],
+      "title": "GoalCriterionFields",
+      "type": "object"
+    },
+    "GoalTaskFields": {
+      "additionalProperties": true,
+      "description": "One task the candidate model answers, identified by the prompt that produced it.\n\nAttributes:\n    key: Stable identifier within the goal.\n    prompt_id: The task prompt's record ID (ADR-0012 — a task prompt is a prompt record).\n    prompt_version: That record's semantic version.\n    prompt_sha256: That record's canonical hash, a ``goal_hash`` input.\n    is_starter: Whether this is unedited shipped starter content. A goal still running\n        entirely on starter tasks measures the starter's author's work rather than the\n        importer's, and carrying the flag is what lets a consumer say so.",
+      "properties": {
+        "is_starter": {
+          "default": false,
+          "title": "Is Starter",
+          "type": "boolean"
+        },
+        "key": {
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "prompt_id": {
+          "minLength": 1,
+          "title": "Prompt Id",
+          "type": "string"
+        },
+        "prompt_sha256": {
+          "minLength": 1,
+          "title": "Prompt Sha256",
+          "type": "string"
+        },
+        "prompt_version": {
+          "minLength": 1,
+          "title": "Prompt Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "prompt_id",
+        "prompt_version",
+        "prompt_sha256"
+      ],
+      "title": "GoalTaskFields",
+      "type": "object"
+    },
+    "JudgeSetFields": {
+      "additionalProperties": true,
+      "description": "The instrument that produced a judged score — a hard-separation input (ADR-0032 §4).\n\nA different jury is a different instrument, and therefore a different measurement. This is\nrecorded rather than summarized because a consumer must be able to decide comparability\nwithout asking the producer, exactly as it does for a benchmark version.\n\nAttributes:\n    jurors: Canonical model IDs of the jury members, in the order they were polled. Two or\n        more is the documented default; one is permitted and loses the inter-juror agreement\n        that distinguishes bias from noise, which is why the count is visible here rather\n        than folded into a summary figure.\n    prompt_id: The judge prompt record's ID (ADR-0012 — a judge rubric is a prompt record).\n    prompt_version: That record's semantic version.\n    prompt_sha256: That record's canonical hash, so a consumer can separate on the prompt\n        without holding the prompt.\n    remote: Whether any juror ran outside the measuring machine. Locally-judged and\n        remotely-judged results are **separated**, never merged (ADR-0031 §4), so this is a\n        comparability input and not a footnote.",
+      "properties": {
+        "jurors": {
+          "$ref": "#/$defs/WireSequence_str_",
+          "default": []
+        },
+        "prompt_id": {
+          "minLength": 1,
+          "title": "Prompt Id",
+          "type": "string"
+        },
+        "prompt_sha256": {
+          "minLength": 1,
+          "title": "Prompt Sha256",
+          "type": "string"
+        },
+        "prompt_version": {
+          "minLength": 1,
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "remote": {
+          "title": "Remote",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "prompt_id",
+        "prompt_version",
+        "prompt_sha256",
+        "remote"
+      ],
+      "title": "JudgeSetFields",
+      "type": "object"
+    },
+    "WireEnum_ScoringRung_": {
+      "description": "Which rung of the scoring ladder a criterion is scored at (benchmark catalog §1).\n\nA ``StrEnum`` so it serializes as its own name. Recording it per criterion is not bookkeeping:\nit is what makes ``score_method_mix`` computable, and therefore what lets a consumer tell a\nscore that is mostly rules from a score that is mostly judgement. Those are different kinds of\nnumber and presenting them identically is the failure this field prevents.",
+      "enum": [
+        "rule",
+        "reference",
+        "human",
+        "judge"
+      ],
+      "title": "ScoringRung",
+      "type": "string"
+    },
+    "WireSequence_GoalCriterionFields_": {
+      "items": {
+        "$ref": "#/$defs/GoalCriterionFields"
+      },
+      "type": "array"
+    },
+    "WireSequence_GoalTaskFields_": {
+      "items": {
+        "$ref": "#/$defs/GoalTaskFields"
+      },
+      "type": "array"
+    },
+    "WireSequence_str_": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contributes_to": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Contributes To"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "created_by": {
+      "minLength": 1,
+      "title": "Created By",
+      "type": "string"
+    },
+    "criteria": {
+      "$ref": "#/$defs/WireSequence_GoalCriterionFields_",
+      "default": []
+    },
+    "goal_hash": {
+      "minLength": 1,
+      "title": "Goal Hash",
+      "type": "string"
+    },
+    "goal_pack_version": {
+      "minLength": 1,
+      "title": "Goal Pack Version",
+      "type": "string"
+    },
+    "intent": {
+      "default": "",
+      "title": "Intent",
+      "type": "string"
+    },
+    "judge_set": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JudgeSetFields"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "slug": {
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Slug",
+      "type": "string"
+    },
+    "tasks": {
+      "$ref": "#/$defs/WireSequence_GoalTaskFields_",
+      "default": []
+    },
+    "unforked": {
+      "default": false,
+      "title": "Unforked",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "slug",
+    "name",
+    "goal_pack_version",
+    "goal_hash",
+    "created_by",
+    "created_at"
+  ],
+  "title": "benchmark.goal_pack",
+  "type": "object"
+}

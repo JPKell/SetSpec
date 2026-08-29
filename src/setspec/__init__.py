@@ -11,6 +11,13 @@ reader policy; canonical serialization with the ``Unsupported`` and RFC 3339 cod
 preserving payload bases with the generator that pairs them; ``MetricValue``; and the capability
 vocabulary. Anything not listed in ``__all__`` is private and may change without a version bump.
 
+Phase 4 adds the schema artifacts to that flat surface — ``json_schema_for``,
+``golden_payloads``, ``golden_names`` and ``PUBLISHED_SCHEMAS``, grouped under "schema artefacts"
+in [spec §7](../../docs/packages/setspec/spec.md). They belong here rather than in a versioned
+module for the same reason ``MetricValue`` does: an accessor that *returns* a version's artifacts
+is not itself versioned, and a consumer asking for ``benchmark.result 2.0``'s JSON Schema calls
+the same function a consumer asking for ``1.0`` does.
+
 **Payload types are not re-exported here.** ``model.identity``, ``machine.profile``,
 ``benchmark.result``, ``benchmark.run_summary``, ``capability.evidence`` and
 ``benchmark.evidence_bundle`` (Phase 2), and ``benchmark.goal_pack`` /
@@ -44,6 +51,12 @@ reader carry a v1.1 document through a re-export without destroying the parts it
 from __future__ import annotations
 
 from setspec.__about__ import __version__
+from setspec.artifacts import (
+    PUBLISHED_SCHEMAS,
+    golden_names,
+    golden_payloads,
+    json_schema_for,
+)
 from setspec.base import (
     PayloadDefinition,
     PreservingPayload,
@@ -85,6 +98,7 @@ __all__ = [
     "DRAFT_SCHEMAS",
     "MAX_PAYLOAD_BYTES",
     "MAX_PAYLOAD_DEPTH",
+    "PUBLISHED_SCHEMAS",
     "RESERVED_ROOTS",
     "SUPPORTED_SCHEMAS",
     "UNSUPPORTED_JSON",
@@ -106,7 +120,10 @@ __all__ = [
     "__version__",
     "canonical_dumps",
     "dump_envelope",
+    "golden_names",
+    "golden_payloads",
     "is_known_capability",
+    "json_schema_for",
     "load_envelope",
     "parse_json",
     "payload_models",

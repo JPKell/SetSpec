@@ -161,20 +161,18 @@ precisely when **no** evidence was emitted: a goal below its calibration gate pr
 record at all, so without a separate schema the most informative outcome a user can get would have
 no wire form.
 
-**Draft status (as of `0.2.0`, Phase 2).** The six entries above are registered so FreeWeight has
-concrete, negotiable schemas to build against, but none is frozen: [development plan Phase 4]
-(../../docs/packages/setspec/development-plan.md) may still change a field's shape after
-FreeWeight has produced real results, and that change may need to happen at ``1.0`` rather than as
-a new major, because nothing has shipped against these schemas outside this repository yet. A
-reader pinning to exactly ``1.0`` today is pinning to a draft; the schema names and this fact are
-documented wherever each payload module defines its fields, not encoded into the version number
-itself — ``SchemaVersion`` has no "draft" concept, and adding one here would weaken the exact
-``MAJOR.MINOR`` contract every *frozen* schema relies on for every consumer that is not SetSpec's
-own Phase 4.
+**Frozen (as of `0.3.0`, Phase 4).** Every entry above is `1.0` and none is a draft any more:
+:data:`DRAFT_SCHEMAS` is empty, each version has a committed JSON Schema and at least three golden
+payloads under :mod:`setspec.artifacts`, and the ordinary rules now apply without exception — a
+new optional field is a minor bump, and a removal, rename, retype or tightening is a major. A
+reader pinning to ``1.0`` is pinning to a shape this build cannot change without publishing a new
+version, which is what the snapshot contract test enforces (ADR-0009 rule 7).
 
-Two payload types remain unregistered at `0.2.0`: ``event.envelope`` and ``error.envelope``
-arrive in Phase 3, and ``prompt.record``/``prompt.manifest`` in Phase 5. Naming them here before
-their fields exist would be the same guess Phase 2's own risk note warns against, one layer up.
+Two payload types remain unregistered at `0.3.0`: ``event.envelope`` and ``error.envelope`` arrive
+in Phase 3, and ``prompt.record``/``prompt.manifest`` in Phase 5. Naming them here before their
+fields exist would be the same guess Phase 2's own risk note warns against, one layer up. Their
+absence is why the freeze covers eight payload types rather than the eleven ADR-0009 lists: a
+schema is frozen by being published, and an unwritten one has nothing to publish.
 
 A :func:`load_envelope` call naming a schema that is not registered raises
 :class:`~setspec.errors.SchemaVersionUnsupported` with an empty ``supported`` list, which reads as
@@ -183,19 +181,14 @@ gets for a schema retired in a future major.
 """
 
 
-DRAFT_SCHEMAS: Final[frozenset[str]] = frozenset(
-    {
-        "model.identity",
-        "machine.profile",
-        "benchmark.result",
-        "benchmark.run_summary",
-        "capability.evidence",
-        "benchmark.evidence_bundle",
-        "benchmark.goal_pack",
-        "benchmark.calibration_report",
-    }
-)
+DRAFT_SCHEMAS: Final[frozenset[str]] = frozenset()
 """Which registered schemas are still provisional, and may change shape without a major bump.
+
+**Empty as of `0.3.0` — this is the freeze.** Every registered schema is a published `1.0` with a
+committed JSON Schema and goldens behind it, so none may be reshaped in place any more. The set
+survives its own emptiness on purpose: it is the mechanism a *future* draft uses, and deleting it
+would mean the next provisional payload type either ships silently provisional or invents a second
+way of saying so.
 
 [Development plan Phase 2](../../docs/packages/setspec/development-plan.md) requires draft status
 to be *visible in the API*, not only described in prose, and asks for it to be marked "in
@@ -208,9 +201,9 @@ Phase 4. A separate set says the same thing, is equally machine-readable, and di
 freezing a schema is one deletion from this set.
 
 A schema listed here is registered and readable — negotiation treats it exactly like any other —
-but a consumer outside this repository should know that pinning to its ``1.0`` today is pinning to
-a shape [Phase 4](../../docs/packages/setspec/development-plan.md) may still correct once
-FreeWeight has produced real results against it. Empty is the goal state.
+but a consumer outside this repository should know that pinning to its ``1.0`` is pinning to a
+shape that may still be corrected in place. Empty is the goal state, and
+[Phase 4](../../docs/packages/setspec/development-plan.md) reached it.
 """
 
 

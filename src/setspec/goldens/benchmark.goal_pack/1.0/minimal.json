@@ -1,0 +1,25 @@
+{
+  "created_at": "2026-08-20T16:40:00.000Z",
+  "created_by": "the goal's author",
+  "criteria": [
+    {
+      "key": "no_em_dashes",
+      "name": "No em dashes",
+      "rule_type": "forbidden_phrases",
+      "rung": "rule",
+      "weight": 1.0
+    }
+  ],
+  "goal_hash": "0f3d8b1a6c92e547",
+  "goal_pack_version": "1.0.0",
+  "name": "No em dashes",
+  "slug": "no_em_dashes",
+  "tasks": [
+    {
+      "key": "release_note",
+      "prompt_id": "goal.no_em_dashes.release_note",
+      "prompt_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "prompt_version": "1.0.0"
+    }
+  ]
+}

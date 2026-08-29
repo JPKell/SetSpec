@@ -12,10 +12,10 @@ the instrument that produced it has been characterized against ground truth. Eve
 performance, and ``kappa_w`` is never carried without ``n_holdout`` — a coefficient without its
 sample count is a number pretending to be a fact.
 
-**Status: draft (`1.0`).** Registered in :data:`setspec.envelope.SUPPORTED_SCHEMAS` and listed in
-:data:`setspec.envelope.DRAFT_SCHEMAS`: these shapes predate FreeWeight Phases 8A–8B actually
-producing goal packs and calibration reports, so the freeze against real output may still adjust a
-field that turns out to be shaped wrong.
+**Status: frozen (`1.0`).** See :mod:`setspec.model.v1` for what the freeze binds these two
+modules to. Their shapes predated FreeWeight Phases 8A–8B actually producing goal packs and
+calibration reports; Phase 4's pass against that real output found no field to reshape, and
+:data:`setspec.envelope.DRAFT_SCHEMAS` is now empty.
 """
 
 from __future__ import annotations

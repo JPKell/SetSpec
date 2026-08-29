@@ -124,9 +124,11 @@ RESERVED_ROOTS: frozenset[str]        # roots valid ONLY as a specialization; {"
 validate_capability(capability_id: str) -> CapabilityId
 is_known_capability(capability_id: str) -> bool
 
-# Schema artefacts
-json_schema_for(schema: str, version: SchemaVersion) -> dict
-golden_payloads(schema: str, version: SchemaVersion) -> list[dict]
+# Schema artefacts (package data; every published version keeps both for the life of its major)
+PUBLISHED_SCHEMAS: Mapping[str, tuple[SchemaVersion, ...]]   # exact versions with committed artefacts
+json_schema_for(schema: str, version: SchemaVersion) -> dict   # the committed JSON Schema snapshot
+golden_payloads(schema: str, version: SchemaVersion) -> list[dict]   # ≥ 3 per version, by name
+golden_names(schema: str, version: SchemaVersion) -> tuple[str, ...]  # the same order as above
 
 # Prompts (ADR-0028) — one implementation of a determinism contract, not three
 class PromptLibrary:

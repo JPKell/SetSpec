@@ -1,0 +1,34 @@
+{
+  "active_parameter_count": 32000000000,
+  "architecture": "transformer",
+  "artifact_digest": "sha256:3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+  "attention_heads": 40,
+  "canonical_id": "ollama/qwen3.5:32b-instruct-q8_0@sha256:3f3f3f3f3f3f",
+  "declared_capabilities": [
+    "tools",
+    "thinking",
+    "structured_output"
+  ],
+  "embedding_dim": 5120,
+  "expert_count": "unsupported",
+  "family": "qwen3.5",
+  "head_dim": 128,
+  "identity_confidence": "digest",
+  "kv_heads": 8,
+  "layers": 64,
+  "license_text": "Apache-2.0",
+  "max_context": 131072,
+  "observed_at": "2026-08-21T09:14:02.318Z",
+  "parameter_count": 32000000000,
+  "provider_kind": "ollama",
+  "provider_model_name": "qwen3.5:32b-instruct-q8_0",
+  "quantization": "Q8_0",
+  "rope_config": {
+    "factor": 4.0,
+    "type": "yarn"
+  },
+  "size_bytes": 34359738368,
+  "sliding_window": 4096,
+  "vocab_size": 151936,
+  "weight_format": "gguf"
+}

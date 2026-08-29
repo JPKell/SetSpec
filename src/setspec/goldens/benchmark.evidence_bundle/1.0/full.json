@@ -1,0 +1,218 @@
+{
+  "complete": true,
+  "evidence": [
+    {
+      "benchmark_versions": {
+        "external.humaneval": "1.0.0",
+        "native.coding": "2.0.1"
+      },
+      "capability_id": "coding.python",
+      "computed_at": "2026-08-21T09:20:00.000Z",
+      "confidence": 0.67,
+      "contributing_metrics": [
+        {
+          "metric_key": "task_success",
+          "sample_count": 40,
+          "weight": 0.7
+        },
+        {
+          "metric_key": "compile_success",
+          "sample_count": 20,
+          "weight": 0.3
+        }
+      ],
+      "dataset_hashes": {
+        "humaneval": "6f1a9c3d7e208b45"
+      },
+      "dispersion": 0.19,
+      "environment": {
+        "cuda_version": "13.0",
+        "gpu_driver_version": "580.65.06",
+        "os_version": "Ubuntu 26.04 LTS",
+        "provider_kind": "ollama",
+        "provider_version": "0.32.13"
+      },
+      "excluded_count": 4,
+      "judge_validity_factor": 1.0,
+      "machine_fingerprint": "9d1c4a5f2b7e83c04e6a1f9b2d5c7e83",
+      "measured_at": "2026-08-21T09:19:41.902Z",
+      "model": {
+        "active_parameter_count": 32000000000,
+        "architecture": "transformer",
+        "artifact_digest": "sha256:3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+        "attention_heads": 40,
+        "canonical_id": "ollama/qwen3.5:32b-instruct-q8_0@sha256:3f3f3f3f3f3f",
+        "declared_capabilities": [
+          "tools",
+          "thinking",
+          "structured_output"
+        ],
+        "embedding_dim": 5120,
+        "expert_count": "unsupported",
+        "family": "qwen3.5",
+        "head_dim": 128,
+        "identity_confidence": "digest",
+        "kv_heads": 8,
+        "layers": 64,
+        "license_text": "Apache-2.0",
+        "max_context": 131072,
+        "observed_at": "2026-08-21T09:14:02.318Z",
+        "parameter_count": 32000000000,
+        "provider_kind": "ollama",
+        "provider_model_name": "qwen3.5:32b-instruct-q8_0",
+        "quantization": "Q8_0",
+        "rope_config": {
+          "factor": 4.0,
+          "type": "yarn"
+        },
+        "size_bytes": 34359738368,
+        "sliding_window": 4096,
+        "vocab_size": 151936,
+        "weight_format": "gguf"
+      },
+      "policy_version": "1.0.0",
+      "prompt_subset_hashes": {
+        "external.humaneval": "8b2f0d6a4c193e57",
+        "native.coding": "3c7e1a9b5d204f81"
+      },
+      "runtime_profile_hash": "17c2fc02b32ad4ee",
+      "sample_count": 60,
+      "score": 0.83,
+      "source_run_ids": [
+        "run_01JC8F2K",
+        "run_01JC8F5Q"
+      ],
+      "vocabulary_version": "1.1"
+    },
+    {
+      "benchmark_versions": {
+        "goal.noir_tech_voice": "1.1.0"
+      },
+      "calibration": {
+        "bias": -0.13,
+        "graded_by": "the goal's author",
+        "kappa_w": 0.74,
+        "mae": 0.42,
+        "measured_at": "2026-08-20T17:02:11.004Z",
+        "n_anchor": 6,
+        "n_holdout": 18,
+        "rho": 0.81
+      },
+      "capability_id": "user.noir_tech_voice",
+      "computed_at": "2026-08-21T11:05:00.000Z",
+      "confidence": 0.39,
+      "contributing_metrics": [
+        {
+          "metric_key": "criterion.house_voice",
+          "sample_count": 24,
+          "weight": 0.6
+        },
+        {
+          "metric_key": "criterion.no_hedging",
+          "sample_count": 24,
+          "weight": 0.4
+        }
+      ],
+      "dispersion": 0.22,
+      "environment": {
+        "cuda_version": "13.0",
+        "gpu_driver_version": "580.65.06",
+        "os_version": "Ubuntu 26.04 LTS",
+        "provider_kind": "ollama",
+        "provider_version": "0.32.13"
+      },
+      "excluded_count": 2,
+      "goal_hash": "7b41e6c05a9d283f1c0e4b8a6d29f537",
+      "goal_pack_version": "1.1.0",
+      "judge_set": {
+        "jurors": [
+          "ollama/qwen3.5:32b-instruct-q8_0@sha256:3f3f3f3f3f3f",
+          "llamacpp/gemma-3-12b-it-Q4_K_M.gguf@sha256:a1a1a1a1a1a1"
+        ],
+        "prompt_id": "goal.judge.noir_tech_voice",
+        "prompt_sha256": "2c624232cdd221771294dfbb310aca000a0df6ac8b66b696d90ef06fdefb64a3",
+        "prompt_version": "1.2.0",
+        "remote": false
+      },
+      "judge_validity_factor": 0.64,
+      "machine_fingerprint": "9d1c4a5f2b7e83c04e6a1f9b2d5c7e83",
+      "measured_at": "2026-08-21T11:02:18.640Z",
+      "model": {
+        "active_parameter_count": 32000000000,
+        "architecture": "transformer",
+        "artifact_digest": "sha256:3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+        "attention_heads": 40,
+        "canonical_id": "ollama/qwen3.5:32b-instruct-q8_0@sha256:3f3f3f3f3f3f",
+        "declared_capabilities": [
+          "tools",
+          "thinking",
+          "structured_output"
+        ],
+        "embedding_dim": 5120,
+        "expert_count": "unsupported",
+        "family": "qwen3.5",
+        "head_dim": 128,
+        "identity_confidence": "digest",
+        "kv_heads": 8,
+        "layers": 64,
+        "license_text": "Apache-2.0",
+        "max_context": 131072,
+        "observed_at": "2026-08-21T09:14:02.318Z",
+        "parameter_count": 32000000000,
+        "provider_kind": "ollama",
+        "provider_model_name": "qwen3.5:32b-instruct-q8_0",
+        "quantization": "Q8_0",
+        "rope_config": {
+          "factor": 4.0,
+          "type": "yarn"
+        },
+        "size_bytes": 34359738368,
+        "sliding_window": 4096,
+        "vocab_size": 151936,
+        "weight_format": "gguf"
+      },
+      "policy_version": "1.0.0",
+      "prompt_subset_hashes": {
+        "goal.noir_tech_voice": "c4a7e0b93f61d825"
+      },
+      "runtime_profile_hash": "17c2fc02b32ad4ee",
+      "sample_count": 24,
+      "score": 0.68,
+      "score_method_mix": {
+        "judge": 0.6,
+        "rule": 0.4
+      },
+      "source_run_ids": [
+        "run_01JC9A0T"
+      ],
+      "uncalibrated": false,
+      "vocabulary_version": "1.1"
+    },
+    {
+      "capability_id": "reasoning",
+      "computed_at": "2026-08-21T09:20:00.000Z",
+      "confidence": 0.41,
+      "dispersion": "unsupported",
+      "environment": {
+        "provider_kind": "ollama",
+        "provider_version": "0.32.13"
+      },
+      "excluded_count": 0,
+      "machine_fingerprint": "9d1c4a5f2b7e83c04e6a1f9b2d5c7e83",
+      "measured_at": "2026-08-21T09:19:41.902Z",
+      "model": {
+        "canonical_id": "ollama/qwen3.5:latest@unknown",
+        "identity_confidence": "name_only",
+        "observed_at": "2026-08-21T09:14:02.318Z",
+        "provider_kind": "ollama",
+        "provider_model_name": "qwen3.5:latest"
+      },
+      "policy_version": "1.0.0",
+      "runtime_profile_hash": "e06e92b4d4803b3b",
+      "sample_count": 12,
+      "score": 0.72,
+      "vocabulary_version": "1.1"
+    }
+  ],
+  "source_id": "freeweight-bench-01"
+}

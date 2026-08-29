@@ -1,0 +1,83 @@
+{
+  "benchmark_versions": {
+    "external.humaneval": "1.0.0",
+    "native.coding": "2.0.1"
+  },
+  "capability_id": "coding.python",
+  "computed_at": "2026-08-21T09:20:00.000Z",
+  "confidence": 0.67,
+  "contributing_metrics": [
+    {
+      "metric_key": "task_success",
+      "sample_count": 40,
+      "weight": 0.7
+    },
+    {
+      "metric_key": "compile_success",
+      "sample_count": 20,
+      "weight": 0.3
+    }
+  ],
+  "dataset_hashes": {
+    "humaneval": "6f1a9c3d7e208b45"
+  },
+  "dispersion": 0.19,
+  "environment": {
+    "cuda_version": "13.0",
+    "gpu_driver_version": "580.65.06",
+    "os_version": "Ubuntu 26.04 LTS",
+    "provider_kind": "ollama",
+    "provider_version": "0.32.13"
+  },
+  "excluded_count": 4,
+  "judge_validity_factor": 1.0,
+  "machine_fingerprint": "9d1c4a5f2b7e83c04e6a1f9b2d5c7e83",
+  "measured_at": "2026-08-21T09:19:41.902Z",
+  "model": {
+    "active_parameter_count": 32000000000,
+    "architecture": "transformer",
+    "artifact_digest": "sha256:3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+    "attention_heads": 40,
+    "canonical_id": "ollama/qwen3.5:32b-instruct-q8_0@sha256:3f3f3f3f3f3f",
+    "declared_capabilities": [
+      "tools",
+      "thinking",
+      "structured_output"
+    ],
+    "embedding_dim": 5120,
+    "expert_count": "unsupported",
+    "family": "qwen3.5",
+    "head_dim": 128,
+    "identity_confidence": "digest",
+    "kv_heads": 8,
+    "layers": 64,
+    "license_text": "Apache-2.0",
+    "max_context": 131072,
+    "observed_at": "2026-08-21T09:14:02.318Z",
+    "parameter_count": 32000000000,
+    "provider_kind": "ollama",
+    "provider_model_name": "qwen3.5:32b-instruct-q8_0",
+    "quantization": "Q8_0",
+    "rope_config": {
+      "factor": 4.0,
+      "type": "yarn"
+    },
+    "size_bytes": 34359738368,
+    "sliding_window": 4096,
+    "vocab_size": 151936,
+    "weight_format": "gguf"
+  },
+  "policy_version": "1.0.0",
+  "prompt_subset_hashes": {
+    "external.humaneval": "8b2f0d6a4c193e57",
+    "native.coding": "3c7e1a9b5d204f81"
+  },
+  "runtime_profile_hash": "17c2fc02b32ad4ee",
+  "sample_count": 60,
+  "score": 0.83,
+  "source_run_ids": [
+    "run_01JC8F2K",
+    "run_01JC8F5Q"
+  ],
+  "vocabulary_version": "1.1"
+}

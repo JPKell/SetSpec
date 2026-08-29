@@ -239,12 +239,17 @@ class TestRegisteredSchemas:
         """Marking an unregistered schema draft would describe something that cannot be read."""
         assert DRAFT_SCHEMAS <= set(SUPPORTED_SCHEMAS)
 
-    def test_every_phase_2_schema_is_still_draft(self) -> None:
-        """Phase 4 freezes these; until then the API must say so, not only the prose."""
-        assert DRAFT_SCHEMAS == set(SUPPORTED_SCHEMAS)
+    def test_no_registered_schema_is_still_draft(self) -> None:
+        """Phase 4's freeze, asserted in the API rather than only in the prose.
 
-    def test_a_draft_schema_negotiates_exactly_like_a_frozen_one(self) -> None:
-        """Draft is advisory metadata, never a second acceptance rule."""
+        Every registered schema is a published `1.0` with a committed JSON Schema and goldens
+        behind it, so none may be reshaped in place any more. A name reappearing here is a payload
+        type that quietly re-acquired permission to change without a major bump.
+        """
+        assert DRAFT_SCHEMAS == frozenset()
+
+    def test_a_frozen_schema_negotiates_exactly_as_a_draft_one_did(self) -> None:
+        """Draft is advisory metadata, never a second acceptance rule — before or after freezing."""
         document = _document(
             GeneratorInfo(name="freeweight", version="1.0.0"),
             schema="capability.evidence",

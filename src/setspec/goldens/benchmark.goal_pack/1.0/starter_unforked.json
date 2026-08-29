@@ -1,0 +1,37 @@
+{
+  "contributes_to": null,
+  "created_at": "2026-08-20T16:40:00.000Z",
+  "created_by": "the goal's author",
+  "criteria": [
+    {
+      "key": "reading_level",
+      "name": "Reading level",
+      "rule_type": "reading_level",
+      "rung": "rule",
+      "weight": 0.5
+    },
+    {
+      "key": "no_jargon",
+      "name": "No jargon",
+      "rule_type": "forbidden_phrases",
+      "rung": "rule",
+      "weight": 0.5
+    }
+  ],
+  "goal_hash": "44c1a9e07b3f2d68",
+  "goal_pack_version": "1.0.0",
+  "intent": "The shipped starter, run as-is.",
+  "judge_set": null,
+  "name": "Plain English",
+  "slug": "plain_english",
+  "tasks": [
+    {
+      "is_starter": true,
+      "key": "explain_dns",
+      "prompt_id": "goal.plain_english.explain_dns",
+      "prompt_sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "prompt_version": "1.0.0"
+    }
+  ],
+  "unforked": true
+}

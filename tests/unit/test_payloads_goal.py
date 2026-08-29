@@ -178,9 +178,9 @@ class TestSchemasAreRegistered:
         assert schema in SUPPORTED_SCHEMAS
 
     @pytest.mark.parametrize("schema", ["benchmark.goal_pack", "benchmark.calibration_report"])
-    def test_the_schema_is_marked_draft(self, schema: str) -> None:
-        """These predate FreeWeight P8A-8B producing real packs; the freeze may still move them."""
-        assert schema in DRAFT_SCHEMAS
+    def test_the_schema_is_frozen(self, schema: str) -> None:
+        """These predated FreeWeight P8A-8B producing real packs; Phase 4's pass moved no field."""
+        assert schema not in DRAFT_SCHEMAS
 
 
 class TestGoalPack:
