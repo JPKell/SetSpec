@@ -2,7 +2,7 @@
 
 **Sequence position:** second component. Depends on BaseAiCore Phase 4.
 **Target:** `setspec 0.3.0` by the end of Phase 4; `0.4.0` adds `setspec.prompts` during LoadCoach P4
-(ADR-0028).
+([ADR-0028](../../adr/0028-prompt-pack-granularity.md)).
 
 Note on ordering: SetSpec's *benchmark* payloads cannot be finalized before FreeWeight knows what a
 result contains. This plan therefore ships the envelope and negotiation machinery first (Phase 1),
@@ -20,7 +20,7 @@ correctly when its major version is unsupported — demonstrated with a trivial 
 **Prerequisites:** `baseaicore>=0.4,<0.5`.
 
 **Work**
-* Repository skeleton (as per Packaging Standards).
+* Repository skeleton (as per [Packaging Standards](../../standards/packaging-and-release-standards.md)).
 * `envelope.py`: `SchemaEnvelope`, `GeneratorInfo`, `SchemaVersion`, `SUPPORTED_SCHEMAS`,
   `load_envelope`, `dump_envelope`, `SchemaVersionUnsupported`.
 * `serialization.py`: canonical JSON dump, `Unsupported` codec, RFC 3339 codec, depth/size guards.
@@ -28,7 +28,7 @@ correctly when its major version is unsupported — demonstrated with a trivial 
   `PreservingPayload` (`extra="allow"`, for inbound), plus the generator that produces an `Out` and an
   `In` class from one payload definition. The round-trip contract is asserted **per class**: an `In`
   model preserves unknown keys through load → dump, an `Out` model rejects them
-  (ADR-0009 rule 4).
+  ([ADR-0009 rule 4](../../adr/0009-setspec-schema-strategy.md)).
 * `MetricValue` model (value | `"unsupported"`, unit, aggregation, `higher_is_better`, sample count,
   dispersion).
 
@@ -72,7 +72,7 @@ fields.
   (model identity, runtime profile, machine, suite, dataset hashes, prompt pack, effective
   parameters, reproducibility fingerprint).
 * `capability/v1.py`: `CapabilityEvidence` with the full normative field set from
-  ADR-0022 §1 — including `measured_at`
+  [ADR-0022 §1](../../adr/0022-capability-evidence-record-contract.md) — including `measured_at`
   **and** `computed_at` as distinct fields, `vocabulary_version`, `dataset_hashes` and
   `prompt_subset_hashes` — and `EvidenceBundle` with its `complete` flag.
 * `machine/v1.py`: `MachineProfilePayload`; `model/v1.py`: `ModelIdentityPayload`.
@@ -90,7 +90,7 @@ tests/unit/test_vocabulary.py
 **Tests**
 * Round-trip for every model with all-optional and all-populated variants.
 * Provenance completeness: a result missing any required provenance field is rejected, with the field
-  named (Machine Identity §6).
+  named ([Machine Identity §6](../../architecture/machine-identity-and-reproducibility.md)).
 * Score/confidence range validation; negative sample counts rejected.
 * A `CapabilityEvidence` missing `measured_at`, `policy_version` or `vocabulary_version` is rejected
   with the field named; `measured_at` later than `computed_at` is rejected as incoherent.
@@ -121,7 +121,7 @@ constrained models that accept results with missing provenance.
 * `event/v1.py`: the event **payload** (`event_id`, `sequence`, `type`, `entity`, `timestamp`,
   `message`, `progress`, `data`), carried inside the standard envelope whose `generator` identifies
   the producing application — so the payload has no separate `source` field
-  (ADR-0025 §3). Event-type naming enforced by validation.
+  ([ADR-0025 §3](../../adr/0025-envelope-boundaries.md)). Event-type naming enforced by validation.
 * `error/v1.py`: `ErrorEnvelope` (`code`, `message`, `details`, `request_id`, `timestamp`) — the
   object inside `{"error": {…}}`, transported **unwrapped**; a test asserts it is never emitted inside
   a SetSpec envelope.
@@ -139,11 +139,11 @@ tests/unit/{test_events,test_errors}.py
 * Error envelope: `code` is `SCREAMING_SNAKE_CASE`; `details` never contains a secret-shaped key
   (asserted by a redaction test).
 * Serialization matches the examples in
-  API Standards §4 and §8 exactly.
+  [API Standards §4 and §8](../../standards/api-and-contract-standards.md) exactly.
 
 **Acceptance criteria**
-1. The documented example payloads in API Standards §4 and §8
-   and Observability §4.1 validate against these models
+1. The documented example payloads in [API Standards §4 and §8](../../standards/api-and-contract-standards.md)
+   and [Observability §4.1](../../standards/observability-standards.md) validate against these models
    verbatim — the check that keeps the three documents from drifting into three wire formats again.
 2. A secret-shaped key in `details` fails the test suite.
 
@@ -161,14 +161,14 @@ per application and testing the registry.
 the "where do user-defined capabilities live" question permanently.
 
 **Prerequisites:** P2. Independent of P3.
-**Driven by:** ADR-0031,
-ADR-0032.
+**Driven by:** [ADR-0031](../../adr/0031-user-defined-goal-benchmarks.md),
+[ADR-0032](../../adr/0032-judge-validity-and-user-capability-namespace.md).
 **Ships in `setspec 0.3.0`** alongside Phase 4 — no separate release. FreeWeight already pins
 `setspec>=0.3,<0.4` and its P11 already requires SetSpec P4, so the existing prerequisite chain
 delivers vocabulary 1.1 before the M3 contract freeze without any change to either pin. The
 package version is **not** bumped when this phase lands: the work accumulates under
 `## [Unreleased]` and `CAPABILITY_VOCABULARY_VERSION` moves on its own axis
-(Packaging Standards §3.1 — distribution,
+([Packaging Standards §3.1](../../standards/packaging-and-release-standards.md) — distribution,
 HTTP API and schema versions are independent, and the vocabulary is a fourth).
 
 **Note for the 0.3.0 release.** This phase narrows forward-compatibility leniency: a payload
@@ -187,7 +187,7 @@ appear in the changelog rather than passing as an implementation detail.
 * `setspec.goal.v1`: `benchmark.goal_pack` and `benchmark.calibration_report`, registered in
   `SUPPORTED_SCHEMAS` and listed in `DRAFT_SCHEMAS`.
 * The goal-sourced field group on `capability.evidence`, every field optional, with the coherence
-  validators from ADR-0032 §5.
+  validators from [ADR-0032 §5](../../adr/0032-judge-validity-and-user-capability-namespace.md).
 
 **Tests**
 * `user.anything_at_all` validates; bare `user` is refused with the reserved roots named.
@@ -258,7 +258,7 @@ serialization; documented and enforced version rules.
 **Deferred:** `routing.decision` export payload; compression; generated non-Python types.
 **Not created:** `production.feedback` — `POST /jobs/{id}/feedback` is an ordinary body of LoadCoach's
 own `/api/v1`, versioned by its path and contracted through the committed OpenAPI snapshot
-(ADR-0025 §5). Recorded as a deliberate rejection.
+([ADR-0025 §5](../../adr/0025-envelope-boundaries.md)). Recorded as a deliberate rejection.
 
 ---
 
@@ -289,5 +289,5 @@ needing the same.
 2. FreeWeight P12 adopts it with no hash change.
 
 **Known risks:** Jinja2 entering SetSpec's dependency set. Accepted in
-ADR-0028; the alternative was three implementations of a
+[ADR-0028](../../adr/0028-prompt-pack-granularity.md); the alternative was three implementations of a
 determinism contract.

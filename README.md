@@ -2,7 +2,7 @@
 
 Every versioned data contract that crosses an application boundary: benchmark results, capability evidence, event/error envelopes, prompt records.
 
-**Status:** `0.3.0` — Phases 1–2, 3A and 4 complete, and **the v1.0 contracts are frozen.** Eight
+**Status:** `0.4.0` — Phases 1–2, 3A, 4 and 5 complete, and **the v1.0 contracts are frozen.** Eight
 payload types are published at `1.0` — `model.identity`, `machine.profile`, `benchmark.result`,
 `benchmark.run_summary`, `capability.evidence`, `benchmark.evidence_bundle`,
 `benchmark.goal_pack` and `benchmark.calibration_report` — each with generated JSON Schema and at
@@ -11,9 +11,12 @@ where the freeze is readable at runtime rather than only stated here; from now o
 field is a minor bump and anything else is a major, enforced by a snapshot diff in CI.
 
 The [schema catalogue](docs/schemas.md) lists every payload type, its artifacts, and the
-cross-field rules the JSON Schema cannot express. Event and error envelopes (Phase 3) and prompt
-records (Phase 5) are not yet written and are therefore not part of the freeze. See the
-[development plan](docs/packages/setspec/development-plan.md) for what each phase adds.
+cross-field rules the JSON Schema cannot express. Event and error envelopes (Phase 3) are not yet
+written and are therefore not part of the freeze. Prompt records (`setspec.prompts`, Phase 5,
+added in 0.4.0) are shipped: prompt packs with their three content hashes and sandboxed
+rendering; they carry their own record schema version rather than joining the eight frozen
+payload types. See the [development plan](docs/packages/setspec/development-plan.md) for what
+each phase adds.
 
 Part of the **Local AI Suite**.
 

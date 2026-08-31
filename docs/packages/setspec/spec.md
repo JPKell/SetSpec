@@ -1,7 +1,7 @@
 # SetSpec — Specification
 
 **Type:** Python package · **Import/distribution name:** `setspec` · **Layer:** 2 (contract package)
-**Status:** Specified, not implemented. **Decision record:** ADR-0009.
+**Status:** Specified, not implemented. **Decision record:** [ADR-0009](../../adr/0009-setspec-schema-strategy.md).
 
 ---
 
@@ -48,7 +48,7 @@ applications can exchange data without sharing code or a database.
 
 `baseaicore`, `pydantic>=2.9,<3`, `jinja2>=3.1,<4`. Nothing else.
 
-Jinja2 arrives with `setspec.prompts` (ADR-0028): prompt
+Jinja2 arrives with `setspec.prompts` ([ADR-0028](../../adr/0028-prompt-pack-granularity.md)): prompt
 records are versioned, hash-bearing documents whose hashes appear in cross-application evidence, so
 they belong with the other contracts rather than being implemented three times. Consumers that want
 schemas without a template engine are served by making it an extra if that need ever appears; today
@@ -166,13 +166,13 @@ Owns the **schemas**, not the data. It never persists anything.
 7a. A prompt record's `sha256`, a rendering's `rendered_sha256` and a `prompt_subset_hash` are
    byte-stable across platforms, Python versions and installed `setspec` versions within a major —
    they appear in evidence that another application reads, so they are contract-grade, golden-tested
-   determinism (ADR-0028 §3).
+   determinism ([ADR-0028 §3](../../adr/0028-prompt-pack-granularity.md)).
 8. The capability vocabulary is versioned: additions are minor, removals/redefinitions are major.
    At **1.1** the reserved root `user` was added, whose specializations (`user.<slug>`) carry
    FreeWeight's user-authored goal evidence. It is the only root a user's own measurement ever
    needs: the existing open-ended specialization rule accepts every future goal without a
    further vocabulary change, and no shipped benchmark maps onto it
-   (ADR-0032 §1).
+   ([ADR-0032 §1](../../adr/0032-judge-validity-and-user-capability-namespace.md)).
 
 ## 12. Configuration
 
@@ -264,7 +264,7 @@ Coverage floor: **95 %**.
 
 * ~~`production.feedback` payload~~ — **not created.** `POST /jobs/{id}/feedback` is an ordinary body
   of LoadCoach's own `/api/v1`, versioned by its path and contracted through the committed OpenAPI
-  snapshot (ADR-0025 §5). Recorded as a deliberate rejection
+  snapshot ([ADR-0025 §5](../../adr/0025-envelope-boundaries.md)). Recorded as a deliberate rejection
   rather than an oversight.
 * `routing.decision` export payload for sharing routing explanations between tools.
 * `benchmark.suite_manifest` as a shareable payload so suites can be exchanged.
