@@ -20,7 +20,13 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "baseaicore>=0.4,<0.5",
+    # >=0.4.1, not >=0.4: `DataClassification` and the adapter value objects
+    # (`AdapterIdentity`) arrive in 0.4.1, and `setspec.governance.v1` and
+    # `setspec.model.v1` import them at module scope — 0.4.0 raises ImportError.
+    # 0.4.1 also fixes the enum docstrings that five committed JSON Schema
+    # snapshots embed as `description` text (docs/schemas.md §5), so a 0.4.0
+    # install fails the snapshot contract test as well.
+    "baseaicore>=0.4.1,<0.5",
     "pydantic>=2.9,<3",
     "jinja2>=3.1,<4",
 ]
