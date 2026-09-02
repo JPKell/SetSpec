@@ -146,12 +146,17 @@ refused.
 
 ### `governance.egress_decision` — one recorded verdict on "may this leave the machine"
 
-All 7 fields required; the only nullable one is `request.target.max_data_classification`, and
-deliberately so — "remote with no declared ceiling" is the fail-closed case SpotCheck's shipped
-policy must be able to deny and record, not a value this schema forbids (ADR-0054 rule 3). This is
-SetSpec's fifth owned root — the first outside `benchmark`/`capability`/`machine`/`model` — added
-because the payload has a named second reader: IdeaPress's S4 egress badge reads decisions
-PromptCadence exported, with SpotCheck not installed (ADR-0051 §4). `verdict` is `approved`,
+All 7 top-level fields required; the nullable ones sit one level down —
+`request.target.max_data_classification` and `request.requested_at`. The first is deliberate:
+"remote with no declared ceiling" is the fail-closed case SpotCheck's shipped policy must be able
+to deny and record, not a value this schema forbids (ADR-0054 rule 3). The second mirrors
+SpotCheck spec §7's own default: `requested_at` records when the *caller built* the request, and
+it exists on the wire so that §11 contract 4 — `from_payload(to_payload(d))` preserves every
+field — is keepable at all. It is never the record's timestamp; `decided_at` is, and that one is
+required. This is SetSpec's fifth owned root — the first outside
+`benchmark`/`capability`/`machine`/`model` — added because the payload has a named second reader:
+IdeaPress's S4 egress badge reads decisions PromptCadence exported, with SpotCheck not installed
+(ADR-0051 §4). `verdict` is `approved`,
 `denied` or `violation`; `violation` is writable but never produced by the shipped policy — it is
 written by a caller's own verification step after the fact (ADR-0054 rule 7), and the schema
 carries whatever `reason` that step supplies rather than validating it against the shipped policy's
@@ -230,7 +235,20 @@ frozen one and adding only optional fields, registered as a second entry in `art
 alongside the untouched original. The frozen class is never edited, so nothing that nests it by
 reference (as `benchmark.evidence_bundle` nests `capability.evidence`) moves with it.
 
-Regenerate the snapshots after any deliberate model change:
+A snapshot can also move without any model here changing. Pydantic embeds a type's `__doc__` as
+its JSON Schema `description`, so an upstream release that only edits a docstring on a type these
+payloads nest — `baseaicore`'s `ProviderKind`, `DataClassification`, `IdentityConfidence`,
+`ModelCapabilityFlag` and the adapter value objects are the ones in reach — changes the generated
+bytes of every schema that embeds it, and the snapshot test fails for a reason that has nothing to
+do with a payload's shape. This is **not** a version-bump trigger. Regenerate, then prove it was
+only prose before committing: strip every `description` from both documents and diff what is left,
+and if any property, type or `required` entry moved, the dependency changed a shape rather than a
+docstring and the change needs a version, not a re-commit. First seen at Phase 6, where
+`baseaicore 0.4.1` moved five already-frozen `1.0` snapshots (`model.identity`,
+`benchmark.result`, `benchmark.run_summary`, `capability.evidence`,
+`benchmark.evidence_bundle`) and changed nothing about any of them (spec §19).
+
+Regenerate the snapshots after any deliberate model change — or after such a dependency bump:
 
 ```bash
 python - <<'PY'

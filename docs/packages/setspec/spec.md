@@ -125,7 +125,7 @@ AdapterManifest          # model.adapter_manifest (ADR-0061 rule 1, Phase 6): na
                          # ADR-0065 rule 1), format (fixed "gguf"), created_at, notes
 GovernanceEgressDecision # governance.egress_decision (ADR-0051 §4, ADR-0054, Phase 6): decision_id,
                          # request (run_id, source_ref, data_classification, target{name, remote,
-                         # max_data_classification, provider_kind}), verdict
+                         # max_data_classification, provider_kind}, requested_at), verdict
                          # (approved | denied | violation), reason, policy_name, policy_version,
                          # decided_at. SetSpec's first payload outside the
                          # benchmark/capability/machine/model roots.
@@ -202,7 +202,12 @@ Owns the **schemas**, not the data. It never persists anything.
    `benchmark.evidence_bundle`) must not have its shape move when the *other* schema is untouched.
    Where the new field's own default is not itself a wire value the old version could produce
    (`None` meaning "absent," not "present and null"), the model suppresses it from the dump rather
-   than emitting it — first exercised at `capability.evidence` `1.1` (ADR-0058).
+   than emitting it — first exercised at `capability.evidence` `1.1` (ADR-0058). The mechanism and
+   its naming rule are [ADR-0068](../../adr/0068-a-post-freeze-minor-is-a-sibling-class.md): the
+   bare `CapabilityEvidenceOut`/`In` keep meaning `1.0` permanently, and adopting a minor is an
+   explicit import of the version-qualified name, never something a dependency upgrade delivers.
+   Carrying a nested payload's new minor into the payload that nests it is that outer payload's
+   own minor, versioned separately (rule 5).
 
 ## 12. Configuration
 
@@ -278,9 +283,10 @@ Coverage floor: **95 %**.
   for at least one minor release of every consumer.
 * Coexisting **minors** of an already-published payload live as sibling classes in the *same*
   module (`CapabilityEvidenceFields` for `1.0`, `CapabilityEvidenceV1_1Fields` for `1.1`), the
-  older one left untouched. First exercised at [Phase 6](development-plan.md): `capability.evidence`
-  went from a single published version to two (`1.0` and `1.1`) without either's committed JSON
-  Schema or goldens moving.
+  older one left untouched, and the bare exported name keeps the version it was frozen at
+  ([ADR-0068](../../adr/0068-a-post-freeze-minor-is-a-sibling-class.md)). First exercised at
+  [Phase 6](development-plan.md): `capability.evidence` went from a single published version to two
+  (`1.0` and `1.1`) without either's committed JSON Schema or goldens moving.
 * The schema compatibility job validates every published version against its goldens on every CI run.
 * A dependency version bump can change a generated schema's `description` text without changing any
   payload's shape, when that text is drawn from the dependency's own docstrings (pydantic embeds an

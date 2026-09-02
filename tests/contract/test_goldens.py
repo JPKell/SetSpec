@@ -112,8 +112,8 @@ class TestEveryVersionPublishesEnoughGoldens:
 
         Compared by serialized size, not top-level key count: a payload whose every top-level
         field is required (``governance.egress_decision``, whose optional fields all sit one
-        level down, inside ``target``) has the same key count either way, and a key-count
-        comparison would report no difference where a real one exists.
+        level down, inside ``request`` and ``target``) has the same key count either way, and a
+        key-count comparison would report no difference where a real one exists.
         """
         minimal = _golden(schema, version, "minimal")
         full = _golden(schema, version, "full")

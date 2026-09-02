@@ -6,6 +6,7 @@
   "reason": "no_ceiling_declared",
   "request": {
     "data_classification": "internal",
+    "requested_at": "2026-09-02T09:06:00.412Z",
     "run_id": "run_01JZK2P",
     "source_ref": "trajectory_7.turn_4",
     "target": {

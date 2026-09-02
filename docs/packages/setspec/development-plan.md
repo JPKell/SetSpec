@@ -331,14 +331,20 @@ today's evidence records are provably unmoved.
 * `governance.egress_decision` `1.0` (new module, `setspec.governance.v1`): SetSpec's fifth owned
   root, per [ADR-0051](../../adr/0051-plans-stay-internal-and-one-payload-travels.md) §4 —
   `decision_id`, `request` (`run_id`, `source_ref`, `data_classification`, `target{name, remote,
-  max_data_classification, provider_kind}`), `verdict` (`approved`/`denied`/`violation`, a local
-  `EgressVerdict` `StrEnum` — SetSpec cannot import SpotCheck, which does not exist as code yet),
-  `reason`, `policy_name`, `policy_version`, `decided_at`. `target.max_data_classification` is the
-  only nullable field: the fail-closed "remote with no declared ceiling" case
-  ([ADR-0054](../../adr/0054-spotcheck-records-egress-it-does-not-enforce-it.md) rule 3) must be
-  representable, not schema-refused. No cross-field "approved implies a ceiling" validator was
-  added: that is `OrderedClassificationPolicy`'s behaviour, and a caller running a different,
-  legitimate policy must not have its decisions rejected by the wire shape.
+  max_data_classification, provider_kind}`, `requested_at`), `verdict`
+  (`approved`/`denied`/`violation`, a local `EgressVerdict` `StrEnum` — SetSpec cannot import
+  SpotCheck, which does not exist as code yet), `reason`, `policy_name`, `policy_version`,
+  `decided_at`. Two nullable fields, both one level down. `target.max_data_classification` carries
+  the fail-closed "remote with no declared ceiling" case
+  ([ADR-0054](../../adr/0054-spotcheck-records-egress-it-does-not-enforce-it.md) rule 3), which
+  must be representable rather than schema-refused. `request.requested_at` mirrors SpotCheck spec
+  §7's own `None` default and exists so that its §11 contract 4 — `from_payload(to_payload(d))`
+  preserves **every** field — can be kept: a value object field with no wire field would make that
+  round trip silently lossy. It is not a second record timestamp; `decided_at` remains the
+  required one, and the two answer different questions (when the caller built the request, when
+  the policy answered it). No cross-field "approved implies a ceiling" validator was added: that is
+  `OrderedClassificationPolicy`'s behaviour, and a caller running a different, legitimate policy
+  must not have its decisions rejected by the wire shape.
 * Register all three in `SUPPORTED_SCHEMAS` (`capability.evidence` → highest known minor `1.1`;
   the two new schemas → `1.0`) and in `artifacts._REGISTRY`/`PUBLISHED_SCHEMAS`. JSON Schema and
   ≥ 3 goldens each: `capability.evidence/1.1` (`minimal`, `full` — adapter-bearing, `unsupported`),
@@ -371,7 +377,10 @@ tests/contract/test_adapter_axis_i15.py     # the exit condition, spelled out ex
   `data_classification` is refused and names the field; a bare reserved capability root is
   refused; a malformed name or digest is refused via the underlying `AdapterIdentity` check.
 * `GovernanceEgressDecisionFields`: all three verdicts validate; a remote target with no declared
-  ceiling validates (the fail-closed case is representable); an unknown verdict is refused.
+  ceiling validates (the fail-closed case is representable); an unknown verdict is refused;
+  `request.requested_at` may be omitted, may be null, normalizes to UTC, refuses a naive datetime,
+  and survives the canonical round trip — the last one is the assertion that justifies the field
+  existing at all (SpotCheck spec §11 contract 4), and `decided_at` stays required beside it.
 * Updated cross-cutting contract tests: the schema-snapshot suite's "everything is frozen at 1.0"
   assertion is split into "no major has ever moved" (permanent) and "every pre-Phase-6 schema is
   still exactly 1.0" (an explicit, named exception for `capability.evidence`); the
@@ -410,5 +419,9 @@ policy — SetSpec carries the shape, not SpotCheck's opinion of it).
 **Gold standards:** additive means byte-identical where nothing changed, not merely
 schema-compatible; a payload's shape says only what every legitimate producer could write, never
 one policy's opinion of what a valid decision looks like.
-**Deferred:** `benchmark.evidence_bundle` gaining the adapter field (LA3, FreeWeight 1.1); SpotCheck
+**Deferred:** `benchmark.evidence_bundle` gaining the adapter field — its own minor, by the
+same sibling-class mechanism ([ADR-0068](../../adr/0068-a-post-freeze-minor-is-a-sibling-class.md)
+rule 5), scheduled as **Phase 7 / `0.6.0`** (row B5 of
+[outstanding-work §1](../../roadmap/outstanding-work.md)) and required before FreeWeight 1.1 can
+export adapter evidence bundled; SpotCheck
 itself, which this phase publishes the shape for but does not implement.

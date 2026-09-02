@@ -42,6 +42,7 @@ def _request(**overrides: Any) -> dict[str, Any]:
         "source_ref": "turn_1",
         "data_classification": "public",
         "target": _target(),
+        "requested_at": None,
     } | overrides
 
 
@@ -88,6 +89,46 @@ class TestEgressRequest:
         del document["data_classification"]
         with pytest.raises(PydanticValidationError, match="data_classification"):
             EgressRequestFields.model_validate(document)
+
+    def test_requested_at_may_be_omitted_entirely(self) -> None:
+        """SpotCheck spec §7 defaults it to None, so a document without it is a valid one."""
+        document = _request()
+        del document["requested_at"]
+        assert EgressRequestFields.model_validate(document).requested_at is None
+
+    def test_requested_at_may_be_null(self) -> None:
+        assert EgressRequestFields.model_validate(_request()).requested_at is None
+
+    def test_requested_at_survives_the_round_trip_that_justifies_it(self) -> None:
+        """SpotCheck spec §11 contract 4: `from_payload(to_payload(d))` preserves every field.
+
+        The reason this field is on the wire at all, asserted rather than assumed: a value that
+        went in must come back out, not be quietly dropped by a shape that has no room for it.
+        """
+        request = EgressRequestFields.model_validate(
+            _request(requested_at="2026-09-02T09:05:11.880Z")
+        )
+        reparsed = EgressRequestFields.model_validate(json.loads(canonical_dumps(request)))
+        assert reparsed.requested_at == request.requested_at
+        assert reparsed == request
+
+    def test_requested_at_normalizes_to_utc_like_every_other_timestamp(self) -> None:
+        request = EgressRequestFields.model_validate(
+            _request(requested_at="2026-09-02T11:05:11.880+02:00")
+        )
+        assert request.requested_at == datetime(2026, 9, 2, 9, 5, 11, 880_000, tzinfo=UTC)
+
+    def test_a_naive_requested_at_is_refused(self) -> None:
+        """Naive means "which clock?" — refused here as everywhere else (serialization §4)."""
+        with pytest.raises(PydanticValidationError, match="requested_at"):
+            EgressRequestFields.model_validate(_request(requested_at="2026-09-02T09:05:11.880"))
+
+    def test_requested_at_is_not_the_records_timestamp(self) -> None:
+        """`decided_at` stays required; the two are different questions, not one duplicated."""
+        document = _decision()
+        del document["decided_at"]
+        with pytest.raises(PydanticValidationError, match="decided_at"):
+            GovernanceEgressDecisionOut.model_validate(document)
 
 
 class TestGovernanceEgressDecision:

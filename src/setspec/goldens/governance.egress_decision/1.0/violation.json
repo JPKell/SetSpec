@@ -6,6 +6,7 @@
   "reason": "local_tier_turn_answered_by_remote_provider",
   "request": {
     "data_classification": "confidential",
+    "requested_at": "2026-09-02T09:58:44.100Z",
     "run_id": "run_01JZK2Q",
     "source_ref": "trajectory_9.turn_2",
     "target": {

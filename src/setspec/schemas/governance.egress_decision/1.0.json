@@ -3,10 +3,23 @@
   "$defs": {
     "EgressRequestFields": {
       "additionalProperties": true,
-      "description": "What was evaluated: which run, which data, headed where.\n\nAttributes:\n    run_id: The trajectory or stage-attempt identity this request was evaluated for.\n    source_ref: A finer locator within the run — a turn id, step id or stage id.\n    data_classification: How sensitive the data under evaluation is. Required and\n        non-nullable: an evaluated request always declares a classification, unlike a\n        target's ceiling, which may legitimately be absent.\n    target: Where the data was headed.",
+      "description": "What was evaluated: which run, which data, headed where.\n\nAttributes:\n    run_id: The trajectory or stage-attempt identity this request was evaluated for.\n    source_ref: A finer locator within the run — a turn id, step id or stage id.\n    data_classification: How sensitive the data under evaluation is. Required and\n        non-nullable: an evaluated request always declares a classification, unlike a\n        target's ceiling, which may legitimately be absent.\n    target: Where the data was headed.\n    requested_at: When the caller built this request, or ``None`` when it did not say.\n        **Nullable, deliberately**: SpotCheck spec §7 gives ``EgressRequest.requested_at`` a\n        default of ``None`` before its clock fills it in, so a required field here would make\n        a legitimately-constructed request unrepresentable and break the round-trip contract\n        this field exists to keep (§11 contract 4). It is not the record's timestamp —\n        :attr:`GovernanceEgressDecisionFields.decided_at` is, and it is required.",
       "properties": {
         "data_classification": {
           "$ref": "#/$defs/WireEnum_DataClassification_"
+        },
+        "requested_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requested At"
         },
         "run_id": {
           "minLength": 1,

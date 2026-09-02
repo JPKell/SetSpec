@@ -9,10 +9,13 @@ SpotCheck not installed — the two-consumer test
 package (ADR-0051 §4).
 
 The field set mirrors SpotCheck spec §7's ``EgressRequest``/``EgressTarget``/``EgressDecision``
-value objects, minus the one field that never needs to travel: ``EgressRequest.requested_at`` is
-SpotCheck's own bookkeeping for when a request was built, and this payload already carries
-``decided_at`` as the record's timestamp, so duplicating a second clock reading here would only
-invite the two to disagree.
+value objects **field for field**, ``EgressRequest.requested_at`` included. That field earns its
+place on the wire not because a consumer needs it but because SpotCheck spec §11 contract 4
+promises ``from_payload(to_payload(d))`` preserves every field: a value-object field with no wire
+field makes that promise unkeepable, and the round trip would silently drop a value rather than
+refuse it. The two timestamps answer different questions and a consumer that needs only one uses
+``decided_at`` — ``requested_at`` is when the caller *built* the request, ``decided_at`` is when
+the policy *answered* it, and the gap between them is the evaluation's own latency.
 
 SpotCheck does not exist as code yet (it is specified, not implemented — see the workspace
 `CLAUDE.md`), so nothing here imports it and nothing here is exercised by it; this module publishes
@@ -83,12 +86,19 @@ class EgressRequestFields(PayloadDefinition):
             non-nullable: an evaluated request always declares a classification, unlike a
             target's ceiling, which may legitimately be absent.
         target: Where the data was headed.
+        requested_at: When the caller built this request, or ``None`` when it did not say.
+            **Nullable, deliberately**: SpotCheck spec §7 gives ``EgressRequest.requested_at`` a
+            default of ``None`` before its clock fills it in, so a required field here would make
+            a legitimately-constructed request unrepresentable and break the round-trip contract
+            this field exists to keep (§11 contract 4). It is not the record's timestamp —
+            :attr:`GovernanceEgressDecisionFields.decided_at` is, and it is required.
     """
 
     run_id: str = Field(min_length=1)
     source_ref: str = Field(min_length=1)
     data_classification: WireEnum[DataClassification]
     target: EgressTargetFields
+    requested_at: TimestampField | None = None
 
 
 class GovernanceEgressDecisionFields(PayloadDefinition):

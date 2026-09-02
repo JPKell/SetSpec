@@ -20,7 +20,10 @@ packaging and release standards §3.
   (`CapabilityEvidenceV1_1Out`/`CapabilityEvidenceV1_1In`), rather than an edit to the existing
   `CapabilityEvidenceFields`/`CapabilityEvidenceOut`/`CapabilityEvidenceIn`, which keep meaning
   `1.0`: `benchmark.evidence_bundle` nests the `capability.evidence` shape by reference, so an
-  edit in place would have silently moved that schema's own committed `1.0` snapshot too.
+  edit in place would have silently moved that schema's own committed `1.0` snapshot too. The
+  mechanism and the naming rule it implies — a bare exported name keeps the version it was frozen
+  at, so adopting `1.1` is an explicit import of `CapabilityEvidenceV1_1Out`/`In` and never
+  something a dependency upgrade delivers — are ADR-0068.
 - **`model.adapter_manifest` `1.0`** (Phase 6, ADR-0061): the operator-reviewed record behind one
   adapter — `name`, `artifact_file`, `artifact_sha256`, optional `source_sha256`, `base` (a
   provider model name plus an optional artifact digest, at `digest`-or-`name_only` confidence),
@@ -31,14 +34,18 @@ packaging and release standards §3.
   omits it is invalid, never silently defaulted closed.
 - **`governance.egress_decision` `1.0`** (Phase 6, ADR-0051 §4, ADR-0054): one recorded egress
   verdict — `decision_id`, an embedded request (`run_id`, `source_ref`, `data_classification`,
-  `target{name, remote, max_data_classification, provider_kind}`), `verdict`
+  `target{name, remote, max_data_classification, provider_kind}`, `requested_at`), `verdict`
   (`approved`/`denied`/`violation`), `reason`, `policy_name`, `policy_version`, `decided_at`.
   SetSpec's first payload under a root other than `benchmark`/`capability`/`machine`/`model` —
   added because the shape has a named second reader (IdeaPress's S4 egress badge reads decisions
-  PromptCadence exported, with SpotCheck not installed). `target.max_data_classification` is the
-  only nullable field, deliberately: "remote with no declared ceiling" is the fail-closed case a
-  policy must be able to deny and record. SpotCheck does not exist as code yet; nothing here
-  imports it.
+  PromptCadence exported, with SpotCheck not installed). Two nullable fields, both one level down.
+  `target.max_data_classification` is deliberate: "remote with no declared ceiling" is the
+  fail-closed case a policy must be able to deny and record. `request.requested_at` mirrors
+  SpotCheck spec §7's own `None` default and is on the wire so that its §11 contract 4 —
+  `from_payload(to_payload(d))` preserves **every** field — is keepable: a value-object field with
+  nowhere to land makes that round trip silently lossy. It is not a second record timestamp;
+  `decided_at` is the record's, and it stays required. SpotCheck does not exist as code yet;
+  nothing here imports it.
 - JSON Schema and goldens for all three: `capability.evidence/1.1.json` (`minimal`, `full`,
   `unsupported`), `model.adapter_manifest/1.0.json` (`minimal`, `full`, `name_only`),
   `governance.egress_decision/1.0.json` (`minimal`, `full`, `denied_no_ceiling`, `violation`).
@@ -47,13 +54,17 @@ packaging and release standards §3.
 
 ### Changed
 
+- **`baseaicore>=0.4.1,<0.5`** (was `>=0.4,<0.5`). `setspec.governance.v1` and
+  `setspec.model.v1` import `DataClassification` and the adapter value objects at module scope,
+  and neither name exists in `baseaicore 0.4.0` — the old floor permitted an install that raises
+  `ImportError` on import. The same floor is what makes the snapshots below reproducible.
 - Five already-committed `1.0` JSON Schema snapshots (`model.identity`, `benchmark.result`,
   `benchmark.run_summary`, `capability.evidence`, `benchmark.evidence_bundle`) were regenerated to
   pick up two `baseaicore 0.4.1` enum docstring edits (`IdentityConfidence`,
-  `ModelCapabilityFlag`) that this release's `baseaicore>=0.4,<0.5` upgrade surfaces in their
-  nested `$defs` descriptions. **Structurally identical** — no property, type or required-field
-  changed, confirmed by a description-stripped diff before committing; the regeneration is a
-  byproduct of the dependency bump, not a payload change.
+  `ModelCapabilityFlag`) that the raised floor above surfaces in their nested `$defs`
+  descriptions. **Structurally identical** — no property, type or required-field changed,
+  confirmed by a description-stripped diff before committing; the regeneration is a byproduct of
+  the dependency bump, not a payload change (`docs/schemas.md` §5).
 - Bumped to 0.5.0 for the `capability.evidence` `1.1` addition and the two new payload types
   (packaging standards §3: additive, non-breaking).
 
