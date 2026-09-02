@@ -7,6 +7,15 @@ packaging and release standards §3.
 
 ## [Unreleased]
 
+### Changed
+- Every prose reference to the planned "SpotCheck" package renamed to its actual name,
+  **Commissioner** — `spotcheck` collided with an unrelated, already-published PyPI package.
+  Cosmetic only: `governance.egress_decision`'s committed `1.0` JSON Schema snapshot regenerated
+  because two nested-type docstrings (`EgressVerdict`, `EgressRequestFields`) named the package;
+  no property, type or required field moved, confirmed by a description-stripped structural diff
+  before committing (the same check `docs/schemas.md` §5 documents for a dependency-docstring
+  ripple). Goldens are untouched — no wire value changed.
+
 ## [0.5.0] — 2026-09-02
 
 ### Added
@@ -38,13 +47,13 @@ packaging and release standards §3.
   (`approved`/`denied`/`violation`), `reason`, `policy_name`, `policy_version`, `decided_at`.
   SetSpec's first payload under a root other than `benchmark`/`capability`/`machine`/`model` —
   added because the shape has a named second reader (IdeaPress's S4 egress badge reads decisions
-  PromptCadence exported, with SpotCheck not installed). Two nullable fields, both one level down.
+  PromptCadence exported, with Commissioner not installed). Two nullable fields, both one level down.
   `target.max_data_classification` is deliberate: "remote with no declared ceiling" is the
   fail-closed case a policy must be able to deny and record. `request.requested_at` mirrors
-  SpotCheck spec §7's own `None` default and is on the wire so that its §11 contract 4 —
+  Commissioner spec §7's own `None` default and is on the wire so that its §11 contract 4 —
   `from_payload(to_payload(d))` preserves **every** field — is keepable: a value-object field with
   nowhere to land makes that round trip silently lossy. It is not a second record timestamp;
-  `decided_at` is the record's, and it stays required. SpotCheck does not exist as code yet;
+  `decided_at` is the record's, and it stays required. Commissioner does not exist as code yet;
   nothing here imports it.
 - JSON Schema and goldens for all three: `capability.evidence/1.1.json` (`minimal`, `full`,
   `unsupported`), `model.adapter_manifest/1.0.json` (`minimal`, `full`, `name_only`),

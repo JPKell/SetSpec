@@ -333,11 +333,11 @@ today's evidence records are provably unmoved.
   `decision_id`, `request` (`run_id`, `source_ref`, `data_classification`, `target{name, remote,
   max_data_classification, provider_kind}`, `requested_at`), `verdict`
   (`approved`/`denied`/`violation`, a local `EgressVerdict` `StrEnum` — SetSpec cannot import
-  SpotCheck, which does not exist as code yet), `reason`, `policy_name`, `policy_version`,
+  Commissioner, which does not exist as code yet), `reason`, `policy_name`, `policy_version`,
   `decided_at`. Two nullable fields, both one level down. `target.max_data_classification` carries
   the fail-closed "remote with no declared ceiling" case
-  ([ADR-0054](../../adr/0054-spotcheck-records-egress-it-does-not-enforce-it.md) rule 3), which
-  must be representable rather than schema-refused. `request.requested_at` mirrors SpotCheck spec
+  ([ADR-0054](../../adr/0054-commissioner-records-egress-it-does-not-enforce-it.md) rule 3), which
+  must be representable rather than schema-refused. `request.requested_at` mirrors Commissioner spec
   §7's own `None` default and exists so that its §11 contract 4 — `from_payload(to_payload(d))`
   preserves **every** field — can be kept: a value object field with no wire field would make that
   round trip silently lossy. It is not a second record timestamp; `decided_at` remains the
@@ -380,7 +380,7 @@ tests/contract/test_adapter_axis_i15.py     # the exit condition, spelled out ex
   ceiling validates (the fail-closed case is representable); an unknown verdict is refused;
   `request.requested_at` may be omitted, may be null, normalizes to UTC, refuses a naive datetime,
   and survives the canonical round trip — the last one is the assertion that justifies the field
-  existing at all (SpotCheck spec §11 contract 4), and `decided_at` stays required beside it.
+  existing at all (Commissioner spec §11 contract 4), and `decided_at` stays required beside it.
 * Updated cross-cutting contract tests: the schema-snapshot suite's "everything is frozen at 1.0"
   assertion is split into "no major has ever moved" (permanent) and "every pre-Phase-6 schema is
   still exactly 1.0" (an explicit, named exception for `capability.evidence`); the
@@ -415,7 +415,7 @@ silently regenerate past.
 `declared_capabilities` with the forward-compatibility exception (the manifest carries no
 `vocabulary_version` to justify it); a cross-field "approved requires a ceiling" validator on
 `governance.egress_decision` (rejects a legitimate document from a caller's own, non-shipped
-policy — SetSpec carries the shape, not SpotCheck's opinion of it).
+policy — SetSpec carries the shape, not Commissioner's opinion of it).
 **Gold standards:** additive means byte-identical where nothing changed, not merely
 schema-compatible; a payload's shape says only what every legitimate producer could write, never
 one policy's opinion of what a valid decision looks like.
@@ -423,5 +423,5 @@ one policy's opinion of what a valid decision looks like.
 same sibling-class mechanism ([ADR-0068](../../adr/0068-a-post-freeze-minor-is-a-sibling-class.md)
 rule 5), scheduled as **Phase 7 / `0.6.0`** (row B5 of
 [outstanding-work §1](../../roadmap/outstanding-work.md)) and required before FreeWeight 1.1 can
-export adapter evidence bundled; SpotCheck
+export adapter evidence bundled; Commissioner
 itself, which this phase publishes the shape for but does not implement.

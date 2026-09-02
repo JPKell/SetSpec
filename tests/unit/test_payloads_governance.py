@@ -1,9 +1,9 @@
 """Tests for ``governance.egress_decision`` (:mod:`setspec.governance.v1`).
 
 SetSpec's fifth owned root, added at Phase 6 because the payload has a named second reader
-(ADR-0051 §4): a `setspec`-only script must be able to read a decision PromptCadence exported, with
-SpotCheck not installed. Nothing here imports SpotCheck — it does not exist as code yet — so every
-fixture is built from SpotCheck spec §7's field list directly.
+(ADR-0051 §4): a `setspec`-only script must be able to read a decision PromptCadence exported,
+with Commissioner not installed. Nothing here imports Commissioner — it does not exist as code
+yet — so every fixture is built from Commissioner spec §7's field list directly.
 """
 
 from __future__ import annotations
@@ -91,7 +91,7 @@ class TestEgressRequest:
             EgressRequestFields.model_validate(document)
 
     def test_requested_at_may_be_omitted_entirely(self) -> None:
-        """SpotCheck spec §7 defaults it to None, so a document without it is a valid one."""
+        """Commissioner spec §7 defaults it to None, so a document without it is a valid one."""
         document = _request()
         del document["requested_at"]
         assert EgressRequestFields.model_validate(document).requested_at is None
@@ -100,7 +100,7 @@ class TestEgressRequest:
         assert EgressRequestFields.model_validate(_request()).requested_at is None
 
     def test_requested_at_survives_the_round_trip_that_justifies_it(self) -> None:
-        """SpotCheck spec §11 contract 4: `from_payload(to_payload(d))` preserves every field.
+        """Commissioner spec §11 contract 4: `from_payload(to_payload(d))` preserves every field.
 
         The reason this field is on the wire at all, asserted rather than assumed: a value that
         went in must come back out, not be quietly dropped by a shape that has no room for it.

@@ -148,19 +148,19 @@ refused.
 
 All 7 top-level fields required; the nullable ones sit one level down —
 `request.target.max_data_classification` and `request.requested_at`. The first is deliberate:
-"remote with no declared ceiling" is the fail-closed case SpotCheck's shipped policy must be able
+"remote with no declared ceiling" is the fail-closed case Commissioner's shipped policy must be able
 to deny and record, not a value this schema forbids (ADR-0054 rule 3). The second mirrors
-SpotCheck spec §7's own default: `requested_at` records when the *caller built* the request, and
+Commissioner spec §7's own default: `requested_at` records when the *caller built* the request, and
 it exists on the wire so that §11 contract 4 — `from_payload(to_payload(d))` preserves every
 field — is keepable at all. It is never the record's timestamp; `decided_at` is, and that one is
 required. This is SetSpec's fifth owned root — the first outside
 `benchmark`/`capability`/`machine`/`model` — added because the payload has a named second reader:
-IdeaPress's S4 egress badge reads decisions PromptCadence exported, with SpotCheck not installed
+IdeaPress's S4 egress badge reads decisions PromptCadence exported, with Commissioner not installed
 (ADR-0051 §4). `verdict` is `approved`,
 `denied` or `violation`; `violation` is writable but never produced by the shipped policy — it is
 written by a caller's own verification step after the fact (ADR-0054 rule 7), and the schema
 carries whatever `reason` that step supplies rather than validating it against the shipped policy's
-four reasons. SpotCheck does not exist as code yet; this module has no dependency on it and is
+four reasons. Commissioner does not exist as code yet; this module has no dependency on it and is
 exercised only from within this repository.
 
 ## 3. Consuming these from another repository

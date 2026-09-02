@@ -4,22 +4,22 @@ Imports pydantic and :mod:`baseaicore`; performs no I/O. This is SetSpec's fifth
 (alongside ``benchmark``, ``capability``, ``machine`` and ``model``), added at
 [Phase 6](../../../docs/packages/setspec/development-plan.md) because the payload has a named
 **second reader**: IdeaPress's S4 egress badge reads decisions PromptCadence exported, with
-SpotCheck not installed — the two-consumer test
+Commissioner not installed — the two-consumer test
 ([ADR-0011](../../../docs/adr/0011-shared-package-boundaries.md)) applied to a schema rather than a
 package (ADR-0051 §4).
 
-The field set mirrors SpotCheck spec §7's ``EgressRequest``/``EgressTarget``/``EgressDecision``
+The field set mirrors Commissioner spec §7's ``EgressRequest``/``EgressTarget``/``EgressDecision``
 value objects **field for field**, ``EgressRequest.requested_at`` included. That field earns its
-place on the wire not because a consumer needs it but because SpotCheck spec §11 contract 4
+place on the wire not because a consumer needs it but because Commissioner spec §11 contract 4
 promises ``from_payload(to_payload(d))`` preserves every field: a value-object field with no wire
 field makes that promise unkeepable, and the round trip would silently drop a value rather than
 refuse it. The two timestamps answer different questions and a consumer that needs only one uses
 ``decided_at`` — ``requested_at`` is when the caller *built* the request, ``decided_at`` is when
 the policy *answered* it, and the gap between them is the evaluation's own latency.
 
-SpotCheck does not exist as code yet (it is specified, not implemented — see the workspace
+Commissioner does not exist as code yet (it is specified, not implemented — see the workspace
 `CLAUDE.md`), so nothing here imports it and nothing here is exercised by it; this module publishes
-only the shape SpotCheck's own ``EgressDecision.to_payload()``/``from_payload()`` will target.
+only the shape Commissioner's own ``EgressDecision.to_payload()``/``from_payload()`` will target.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ __all__ = [
 
 
 class EgressVerdict(StrEnum):
-    """The three outcomes a recorded egress decision may hold (SpotCheck spec §7).
+    """The three outcomes a recorded egress decision may hold (Commissioner spec §7).
 
     ``VIOLATION`` is writable but never produced by the shipped policy — it is written by a
     caller's verification step after the fact, when it finds egress that policy never approved
@@ -87,7 +87,7 @@ class EgressRequestFields(PayloadDefinition):
             target's ceiling, which may legitimately be absent.
         target: Where the data was headed.
         requested_at: When the caller built this request, or ``None`` when it did not say.
-            **Nullable, deliberately**: SpotCheck spec §7 gives ``EgressRequest.requested_at`` a
+            **Nullable, deliberately**: Commissioner spec §7 gives ``EgressRequest.requested_at`` a
             default of ``None`` before its clock fills it in, so a required field here would make
             a legitimately-constructed request unrepresentable and break the round-trip contract
             this field exists to keep (§11 contract 4). It is not the record's timestamp —

@@ -17,7 +17,7 @@ Phase 6 (the adapter arc's LA0 checkpoint) adds three things without touching an
 byte-identical to `1.0` — on every record with no adapter); `model.adapter_manifest` `1.0`
 publishes the operator-reviewed record behind one adapter; and `governance.egress_decision` `1.0`
 is the package's first payload under a root other than `benchmark`/`capability`/`machine`/`model`,
-carrying a recorded egress verdict for a reader that has SpotCheck installed or not.
+carrying a recorded egress verdict for a reader that has Commissioner installed or not.
 
 The [schema catalogue](docs/schemas.md) lists every payload type, its artifacts, and the
 cross-field rules the JSON Schema cannot express. Event and error envelopes (Phase 3) are not yet

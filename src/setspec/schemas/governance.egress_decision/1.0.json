@@ -3,7 +3,7 @@
   "$defs": {
     "EgressRequestFields": {
       "additionalProperties": true,
-      "description": "What was evaluated: which run, which data, headed where.\n\nAttributes:\n    run_id: The trajectory or stage-attempt identity this request was evaluated for.\n    source_ref: A finer locator within the run — a turn id, step id or stage id.\n    data_classification: How sensitive the data under evaluation is. Required and\n        non-nullable: an evaluated request always declares a classification, unlike a\n        target's ceiling, which may legitimately be absent.\n    target: Where the data was headed.\n    requested_at: When the caller built this request, or ``None`` when it did not say.\n        **Nullable, deliberately**: SpotCheck spec §7 gives ``EgressRequest.requested_at`` a\n        default of ``None`` before its clock fills it in, so a required field here would make\n        a legitimately-constructed request unrepresentable and break the round-trip contract\n        this field exists to keep (§11 contract 4). It is not the record's timestamp —\n        :attr:`GovernanceEgressDecisionFields.decided_at` is, and it is required.",
+      "description": "What was evaluated: which run, which data, headed where.\n\nAttributes:\n    run_id: The trajectory or stage-attempt identity this request was evaluated for.\n    source_ref: A finer locator within the run — a turn id, step id or stage id.\n    data_classification: How sensitive the data under evaluation is. Required and\n        non-nullable: an evaluated request always declares a classification, unlike a\n        target's ceiling, which may legitimately be absent.\n    target: Where the data was headed.\n    requested_at: When the caller built this request, or ``None`` when it did not say.\n        **Nullable, deliberately**: Commissioner spec §7 gives ``EgressRequest.requested_at`` a\n        default of ``None`` before its clock fills it in, so a required field here would make\n        a legitimately-constructed request unrepresentable and break the round-trip contract\n        this field exists to keep (§11 contract 4). It is not the record's timestamp —\n        :attr:`GovernanceEgressDecisionFields.decided_at` is, and it is required.",
       "properties": {
         "data_classification": {
           "$ref": "#/$defs/WireEnum_DataClassification_"
@@ -99,7 +99,7 @@
       "type": "string"
     },
     "WireEnum_EgressVerdict_": {
-      "description": "The three outcomes a recorded egress decision may hold (SpotCheck spec §7).\n\n``VIOLATION`` is writable but never produced by the shipped policy — it is written by a\ncaller's verification step after the fact, when it finds egress that policy never approved\n(ADR-0054 rule 7). A schema that could not express it would be wrong: the payload's job is to\ncarry whatever was decided, not to second-guess which verdicts are plausible.",
+      "description": "The three outcomes a recorded egress decision may hold (Commissioner spec §7).\n\n``VIOLATION`` is writable but never produced by the shipped policy — it is written by a\ncaller's verification step after the fact, when it finds egress that policy never approved\n(ADR-0054 rule 7). A schema that could not express it would be wrong: the payload's job is to\ncarry whatever was decided, not to second-guess which verdicts are plausible.",
       "enum": [
         "approved",
         "denied",
