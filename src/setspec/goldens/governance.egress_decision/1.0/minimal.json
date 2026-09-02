@@ -1,0 +1,19 @@
+{
+  "decided_at": "2026-09-02T09:00:00.000Z",
+  "decision_id": "dec_01JZK2M",
+  "policy_name": "OrderedClassificationPolicy",
+  "policy_version": "1.0",
+  "reason": "target_not_remote",
+  "request": {
+    "data_classification": "public",
+    "run_id": "run_01JZK2M",
+    "source_ref": "turn_1",
+    "target": {
+      "max_data_classification": null,
+      "name": "ollama-local",
+      "provider_kind": null,
+      "remote": false
+    }
+  },
+  "verdict": "approved"
+}

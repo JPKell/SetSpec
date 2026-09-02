@@ -1,0 +1,19 @@
+{
+  "artifact_file": "adapters/housevoice.gguf",
+  "artifact_sha256": "sha256:b1b1b1b1b1b10000000000000000000000000000000000000000000000000000",
+  "base": {
+    "artifact_digest": "sha256:a1a1a1a1a1a10000000000000000000000000000000000000000000000000000",
+    "identity_confidence": "digest",
+    "provider_model_name": "gemma-3-12b-it-Q4_K_M.gguf"
+  },
+  "created_at": "2026-09-01T11:30:00.000Z",
+  "data_classification": "internal",
+  "declared_capabilities": [
+    "user.house_voice",
+    "creative_writing"
+  ],
+  "format": "gguf",
+  "name": "housevoice",
+  "notes": "Reviewed 2026-09-01; trained on internal style-guide excerpts.",
+  "source_sha256": "sha256:c1c1c1c1c1c10000000000000000000000000000000000000000000000000000"
+}

@@ -1,0 +1,19 @@
+{
+  "artifact_file": "adapters/draftcritic.gguf",
+  "artifact_sha256": "sha256:d2d2d2d2d2d20000000000000000000000000000000000000000000000000000",
+  "base": {
+    "artifact_digest": null,
+    "identity_confidence": "name_only",
+    "provider_model_name": "qwen3.5-9b-instruct-q8_0.gguf"
+  },
+  "created_at": "2026-09-01T12:15:00.000Z",
+  "data_classification": "confidential",
+  "declared_capabilities": [
+    "critiquing",
+    "code_review"
+  ],
+  "format": "gguf",
+  "name": "draftcritic",
+  "notes": "Base digest unverified: PEFT config names it by tag only. Rescan after next conversion.",
+  "source_sha256": "sha256:e3e3e3e3e3e30000000000000000000000000000000000000000000000000000"
+}

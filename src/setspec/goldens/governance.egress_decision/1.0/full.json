@@ -1,0 +1,19 @@
+{
+  "decided_at": "2026-09-02T09:05:12.000Z",
+  "decision_id": "dec_01JZK2N",
+  "policy_name": "OrderedClassificationPolicy",
+  "policy_version": "1.0",
+  "reason": "within_ceiling",
+  "request": {
+    "data_classification": "internal",
+    "run_id": "run_01JZK2N",
+    "source_ref": "trajectory_7.turn_3",
+    "target": {
+      "max_data_classification": "internal",
+      "name": "tools.plan.remote_cheap",
+      "provider_kind": "openai_compatible",
+      "remote": true
+    }
+  },
+  "verdict": "approved"
+}

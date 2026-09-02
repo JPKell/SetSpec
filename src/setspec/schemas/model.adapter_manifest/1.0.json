@@ -1,0 +1,135 @@
+{
+  "$comment": "setspec model.adapter_manifest 1.0 — generated from the writer model.",
+  "$defs": {
+    "AdapterManifestBaseFields": {
+      "additionalProperties": true,
+      "description": "The base model an adapter targets — provider model name plus an optional artifact digest.\n\nUnlike :class:`ModelIdentityFields`, this carries no ``provider_kind``: the manifest states\nwhich base an adapter was trained against, not which provider serves it, and ADR-0058 §5's\ncompatibility check runs at serve time against the digest actually loaded, not against this\nfield. When the digest is absent the base is *named*, not *proven* — reduced confidence rides\nthe existing :class:`baseaicore.IdentityConfidence` machinery rather than a parallel flag\n(ADR-0061 rule 1).\n\nAttributes:\n    provider_model_name: The base model's name, exactly as the provider names it.\n    artifact_digest: ``\"sha256:\"`` + 64 lowercase hex over the base's served artifact, or\n        ``None`` when the manifest's author could not verify it — a PEFT\n        ``adapter_config.json`` names its base by name only, which is not a proof.\n    identity_confidence: ``digest`` iff :attr:`artifact_digest` is present, ``name_only``\n        otherwise — checked, not merely documented; see\n        :meth:`_check_confidence_matches_digest`.",
+      "properties": {
+        "artifact_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Digest"
+        },
+        "identity_confidence": {
+          "$ref": "#/$defs/WireEnum_IdentityConfidence_"
+        },
+        "provider_model_name": {
+          "minLength": 1,
+          "title": "Provider Model Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider_model_name",
+        "identity_confidence"
+      ],
+      "title": "AdapterManifestBaseFields",
+      "type": "object"
+    },
+    "WireEnum_DataClassification_": {
+      "description": "How sensitive a body of data is: an ordered rank, fixed for the life of the suite.\n\nThree levels, deliberately: fewer cannot express the shipped tier ladder (a local tier serves\nanything, a cheap remote tier serves up to internal, a frontier tier serves public only), and\nmore would be levels no operator can distinguish in practice. **The ordering is the contract**\n— adding a level is a new ADR, not a minor release, because a new member has to be given a\nposition and every value stored under the old vocabulary acquires a new meaning relative to it.\n\nThe lattice join every consumer needs is the built-in :func:`max`::\n\n    >>> from baseaicore import DataClassification as DC\n    >>> max(DC.PUBLIC, DC.CONFIDENTIAL)\n    <DataClassification.CONFIDENTIAL: 'confidential'>\n\nOrdering is by **rank**, never by the member's string value — alphabetically\n``\"confidential\" < \"internal\" < \"public\"``, which is exactly backwards. That trap is why the\nfour ordering operators are defined here rather than inherited from :class:`str`, and why\ncomparing a member against a bare string **raises** instead of quietly answering\nalphabetically.\n\nThe default, wherever one is needed, is :attr:`CONFIDENTIAL`: an undeclared classification is\nthe most restrictive one, so an omission costs a user a remote tier rather than costing them\ntheir data. Callers own that default — this type does not impose it, because the type has no\n\"absent\" member and deliberately never will.\n\nThis is a rank, not a taxonomy. It answers \"how far may this travel\", and it says nothing about\nwhich regulation covers the data or what kind of data it is; a deployment that needs kinds\ncarries them as metadata beside the rank, never as a second vocabulary that also claims to\ngovern egress.",
+      "enum": [
+        "public",
+        "internal",
+        "confidential"
+      ],
+      "title": "DataClassification",
+      "type": "string"
+    },
+    "WireEnum_IdentityConfidence_": {
+      "description": "How firmly an identity pins down a specific set of weights.\n\nStored alongside every measurement. A ``NAME_ONLY`` result carries a permanent caveat: the\nprovider exposed no digest, so it can never be proven later to describe the same weights —\na tag such as ``qwen3.5:latest`` can be repointed at any time. LoadCoach reduces evidence\nconfidence for it and FreeWeight shows it in the UI\n(ADR-0017).",
+      "enum": [
+        "digest",
+        "name_only"
+      ],
+      "title": "IdentityConfidence",
+      "type": "string"
+    },
+    "WireSequence_str_": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_file": {
+      "minLength": 1,
+      "title": "Artifact File",
+      "type": "string"
+    },
+    "artifact_sha256": {
+      "title": "Artifact Sha256",
+      "type": "string"
+    },
+    "base": {
+      "$ref": "#/$defs/AdapterManifestBaseFields"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "data_classification": {
+      "$ref": "#/$defs/WireEnum_DataClassification_"
+    },
+    "declared_capabilities": {
+      "$ref": "#/$defs/WireSequence_str_",
+      "default": []
+    },
+    "format": {
+      "const": "gguf",
+      "default": "gguf",
+      "title": "Format",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    },
+    "source_sha256": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Sha256"
+    }
+  },
+  "required": [
+    "name",
+    "artifact_file",
+    "artifact_sha256",
+    "base",
+    "data_classification",
+    "created_at"
+  ],
+  "title": "model.adapter_manifest",
+  "type": "object"
+}

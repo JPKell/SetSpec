@@ -1,0 +1,16 @@
+{
+  "artifact_file": "factcheck.gguf",
+  "artifact_sha256": "sha256:9e2b41d07c550000000000000000000000000000000000000000000000000000",
+  "base": {
+    "artifact_digest": null,
+    "identity_confidence": "name_only",
+    "provider_model_name": "gemma-3-12b-it-Q4_K_M.gguf"
+  },
+  "created_at": "2026-09-01T10:00:00.000Z",
+  "data_classification": "confidential",
+  "declared_capabilities": [],
+  "format": "gguf",
+  "name": "factcheck",
+  "notes": null,
+  "source_sha256": null
+}

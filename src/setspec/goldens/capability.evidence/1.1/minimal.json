@@ -1,0 +1,25 @@
+{
+  "capability_id": "reasoning",
+  "computed_at": "2026-08-21T09:20:00.000Z",
+  "confidence": 0.41,
+  "dispersion": "unsupported",
+  "environment": {
+    "provider_kind": "ollama",
+    "provider_version": "0.32.13"
+  },
+  "excluded_count": 0,
+  "machine_fingerprint": "9d1c4a5f2b7e83c04e6a1f9b2d5c7e83",
+  "measured_at": "2026-08-21T09:19:41.902Z",
+  "model": {
+    "canonical_id": "ollama/qwen3.5:latest@unknown",
+    "identity_confidence": "name_only",
+    "observed_at": "2026-08-21T09:14:02.318Z",
+    "provider_kind": "ollama",
+    "provider_model_name": "qwen3.5:latest"
+  },
+  "policy_version": "1.0.0",
+  "runtime_profile_hash": "e06e92b4d4803b3b",
+  "sample_count": 12,
+  "score": 0.72,
+  "vocabulary_version": "1.1"
+}

@@ -1,6 +1,45 @@
 {
-  "$comment": "setspec benchmark.evidence_bundle 1.0 — generated from the writer model.",
+  "$comment": "setspec capability.evidence 1.1 — generated from the writer model.",
   "$defs": {
+    "AdapterIdentityFields": {
+      "additionalProperties": true,
+      "description": "Exchange form of :class:`baseaicore.AdapterIdentity` — the optional adapter axis.\n\nCarried on ``capability.evidence`` v1.1 as the optional ``adapter`` field, so a record measured\non ``(base, adapter)`` names the adapter rather than leaving the axis implicit (ADR-0058).\nAbsent entirely on a record measured on the bare base — the additive proof the v1.1 minor bump\nrests on.\n\nAttributes:\n    name: The manifest's human label, matching ``^[a-z][a-z0-9_-]{1,63}$``.\n    artifact_digest: ``\"sha256:\"`` + 64 lowercase hex characters over the **served** GGUF\n        artifact — the identity itself. Required: unlike a model identity, an adapter with no\n        usable digest has no identity to be.\n    source_digest: Optional ``\"sha256:\"`` + 64 lowercase hex over the training checkpoint, for\n        lineage only — never part of identity or of :attr:`canonical_suffix`.\n    canonical_suffix: The ``+{name}@{digest_short}`` suffix this adapter contributes to a\n        canonical subject string (ADR-0058 §3). Materialized rather than left for a reader to\n        derive, exactly as :attr:`ModelIdentityFields.canonical_id` is — see\n        :meth:`_check_identity_coherence`.",
+      "properties": {
+        "artifact_digest": {
+          "title": "Artifact Digest",
+          "type": "string"
+        },
+        "canonical_suffix": {
+          "minLength": 1,
+          "title": "Canonical Suffix",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "source_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Digest"
+        }
+      },
+      "required": [
+        "name",
+        "artifact_digest",
+        "canonical_suffix"
+      ],
+      "title": "AdapterIdentityFields",
+      "type": "object"
+    },
     "CalibrationFields": {
       "additionalProperties": true,
       "description": "How closely the judge agreed with the person whose goal this is (ADR-0031 §3).\n\nThis is what separates an instrument from an opinion. Every field here describes the *judge's*\nerror against user-supplied ground truth, not the measured model's performance.\n\nAttributes:\n    kappa_w: Quadratic-weighted Cohen's kappa between the user's grades and the jury median\n        over the holdout, weighted across judged criteria. Ordinal-aware and chance-corrected;\n        legitimately negative when the judge disagrees with the user worse than chance would.\n    rho: Spearman rank correlation — whether the judge ranks as the user ranks.\n    mae: Mean absolute error in scale points. Non-negative, and in the units the user thinks\n        in rather than a coefficient they must interpret.\n    bias: Mean signed error. Negative means the judge grades harsher than the user, positive\n        more generously. Unbounded here because its scale is the criterion's, which this\n        payload does not carry.\n    n_anchor: Graded samples embedded in the judge prompt as exemplars. May be zero: a rubric\n        may be calibrated without few-shot anchoring.\n    n_holdout: Graded samples the judge was **never shown**, which is the only honest basis\n        for :attr:`kappa_w`. At least one, because agreement measured over nothing is not a\n        measurement — and it travels with the coefficient everywhere precisely so a reader\n        cannot see ``kappa_w`` without seeing what it was computed over.\n    graded_by: Free text the user supplied identifying the grader. Never an account name or\n        an address harvested from the environment.\n    measured_at: When the calibration was measured. Ages like evidence: a rubric calibrated a\n        year ago against a jury that has since changed is stale in the same sense a benchmark\n        result is.",
@@ -58,208 +97,6 @@
         "measured_at"
       ],
       "title": "CalibrationFields",
-      "type": "object"
-    },
-    "CapabilityEvidenceFields": {
-      "additionalProperties": true,
-      "description": "Field definitions for ``capability.evidence``; use :data:`CapabilityEvidenceOut` /\n:data:`CapabilityEvidenceIn`.\n\nAttributes:\n    model: The measured weights (ADR-0024).\n    runtime_profile_hash: The profile the measurement was taken under (ADR-0023).\n    machine_fingerprint: Where it was measured.\n    capability_id: A term in the SetSpec vocabulary; checked against\n        :func:`setspec.vocabulary.validate_capability` using :attr:`vocabulary_version` for\n        the forward-compatibility exception — see :meth:`_check_capability_id`.\n    score: The capability score, ``0`` to ``1`` inclusive.\n    confidence: Computed by FreeWeight per\n        ADR-0017; floored at\n        ``0.05`` by that formula's own clamp, never truly zero.\n    sample_count: Supported samples that produced ``score``.\n    excluded_count: Samples excluded, with the exclusion visible rather than folded silently\n        into a lower ``sample_count``.\n    dispersion: Coefficient of variation for a continuous metric, or disagreement rate for a\n        pass/fail one — ADR-0017 defines which applies from the metric's own kind, not from a\n        flag carried here.\n    measured_at: The **latest ``completed_at`` among the contributing runs** — what\n        ``freshness_factor`` decays from. Never the aggregation time.\n    computed_at: When this aggregation ran. Provenance and the incremental-export filter\n        input; never a confidence input — recomputing evidence must not make it look fresher\n        (ADR-0022 §2), and\n        :meth:`_check_measured_before_computed` enforces the one shape that rule requires:\n        ``measured_at`` cannot be later than the aggregation that used it.\n    policy_version: The confidence-policy version this evidence was computed under.\n    vocabulary_version: The capability-vocabulary version ``capability_id`` was validated\n        against when this evidence was produced.\n    benchmark_versions: Suite key to version — a hard-separation input.\n    dataset_hashes: A hard-separation input.\n    prompt_subset_hashes: Hash **per benchmark key, not per pack**\n        (ADR-0028) — a hard-separation\n        input.\n    contributing_metrics: Which benchmark metrics fed this score, with what weight and how\n        many samples.\n    source_run_ids: Producer-local run IDs. A consumer stores these opaquely and never\n        resolves them.\n    environment: Provider kind and version, GPU driver, CUDA, OS version at measurement.\n    judge_validity_factor: The sixth confidence factor (ADR-0032 §2). **``1.0`` for every\n        measurement scored at ladder rungs 1–4**, which is every native and external\n        benchmark in the suite — so this field changed no existing number when it was added.\n        Below ``1.0`` only for a user-defined goal's judged criteria, in proportion to the\n        judge's measured agreement with the user and shrunk toward zero when the holdout is\n        small. Already multiplied into :attr:`confidence`; carried separately so a consumer\n        can *see* it without recomputing the formula.\n    goal_hash: The measurement-defining hash of the goal that produced this record, when one\n        did. A hard-separation input: a different rubric is a different measurement, exactly\n        as a different benchmark version is (ADR-0032 §4).\n    goal_pack_version: The goal pack's semantic version. Provenance; :attr:`goal_hash` is\n        what separates.\n    score_method_mix: Fraction of scored weight by ladder rung, e.g.\n        ``{\"rule\": 0.6, \"judge\": 0.4}``. Keys are drawn from ``rule``, ``reference``,\n        ``human`` and ``judge``; the values sum to ``1``. A ``0.82`` that is 80 % rules is a\n        different kind of number from a ``0.82`` that is 80 % judgement, and a consumer that\n        cannot tell them apart will eventually present them as the same thing.\n    judge_set: The jury that produced any judged portion — a hard-separation input.\n    calibration: The judge's measured agreement with the user. Present whenever a judged\n        criterion contributed; absent for a goal scored entirely by rules.\n    uncalibrated: Always ``False`` on a record that exists, and refused as ``True`` by\n        :meth:`_check_goal_fields_cohere`. A goal below its calibration gate emits **no\n        record at all** rather than a discounted one (ADR-0032 §3), so a ``True`` here means a\n        producer bug — one worth catching on the wire, where it is one field, rather than in a\n        routing decision months later, where it is a mystery.",
-      "properties": {
-        "benchmark_versions": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "title": "Benchmark Versions",
-          "type": "object"
-        },
-        "calibration": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/CalibrationFields"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "capability_id": {
-          "minLength": 1,
-          "title": "Capability Id",
-          "type": "string"
-        },
-        "computed_at": {
-          "format": "date-time",
-          "title": "Computed At",
-          "type": "string"
-        },
-        "confidence": {
-          "maximum": 1.0,
-          "minimum": 0.05,
-          "title": "Confidence",
-          "type": "number"
-        },
-        "contributing_metrics": {
-          "$ref": "#/$defs/WireSequence_ContributingMetricFields_",
-          "default": []
-        },
-        "dataset_hashes": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "title": "Dataset Hashes",
-          "type": "object"
-        },
-        "dispersion": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "const": "unsupported"
-            }
-          ],
-          "title": "Dispersion"
-        },
-        "environment": {
-          "$ref": "#/$defs/EnvironmentFields"
-        },
-        "excluded_count": {
-          "minimum": 0,
-          "title": "Excluded Count",
-          "type": "integer"
-        },
-        "goal_hash": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Goal Hash"
-        },
-        "goal_pack_version": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Goal Pack Version"
-        },
-        "judge_set": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/JudgeSetFields"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "judge_validity_factor": {
-          "default": 1.0,
-          "maximum": 1.0,
-          "minimum": 0.05,
-          "title": "Judge Validity Factor",
-          "type": "number"
-        },
-        "machine_fingerprint": {
-          "minLength": 1,
-          "title": "Machine Fingerprint",
-          "type": "string"
-        },
-        "measured_at": {
-          "format": "date-time",
-          "title": "Measured At",
-          "type": "string"
-        },
-        "model": {
-          "$ref": "#/$defs/ModelIdentityFields"
-        },
-        "policy_version": {
-          "minLength": 1,
-          "title": "Policy Version",
-          "type": "string"
-        },
-        "prompt_subset_hashes": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "title": "Prompt Subset Hashes",
-          "type": "object"
-        },
-        "runtime_profile_hash": {
-          "minLength": 1,
-          "title": "Runtime Profile Hash",
-          "type": "string"
-        },
-        "sample_count": {
-          "minimum": 0,
-          "title": "Sample Count",
-          "type": "integer"
-        },
-        "score": {
-          "maximum": 1.0,
-          "minimum": 0.0,
-          "title": "Score",
-          "type": "number"
-        },
-        "score_method_mix": {
-          "anyOf": [
-            {
-              "additionalProperties": {
-                "type": "number"
-              },
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Score Method Mix"
-        },
-        "source_run_ids": {
-          "$ref": "#/$defs/WireSequence_str_",
-          "default": []
-        },
-        "uncalibrated": {
-          "default": false,
-          "title": "Uncalibrated",
-          "type": "boolean"
-        },
-        "vocabulary_version": {
-          "minLength": 1,
-          "title": "Vocabulary Version",
-          "type": "string"
-        }
-      },
-      "required": [
-        "model",
-        "runtime_profile_hash",
-        "machine_fingerprint",
-        "capability_id",
-        "score",
-        "confidence",
-        "sample_count",
-        "excluded_count",
-        "dispersion",
-        "measured_at",
-        "computed_at",
-        "policy_version",
-        "vocabulary_version",
-        "environment"
-      ],
-      "title": "CapabilityEvidenceFields",
       "type": "object"
     },
     "ContributingMetricFields": {
@@ -673,12 +510,6 @@
       "title": "ProviderKind",
       "type": "string"
     },
-    "WireSequence_CapabilityEvidenceFields_": {
-      "items": {
-        "$ref": "#/$defs/CapabilityEvidenceFields"
-      },
-      "type": "array"
-    },
     "WireSequence_ContributingMetricFields_": {
       "items": {
         "$ref": "#/$defs/ContributingMetricFields"
@@ -701,24 +532,212 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
-    "complete": {
-      "title": "Complete",
-      "type": "boolean"
+    "adapter": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AdapterIdentityFields"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
-    "evidence": {
-      "$ref": "#/$defs/WireSequence_CapabilityEvidenceFields_",
+    "benchmark_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Benchmark Versions",
+      "type": "object"
+    },
+    "calibration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CalibrationFields"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "capability_id": {
+      "minLength": 1,
+      "title": "Capability Id",
+      "type": "string"
+    },
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.05,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "contributing_metrics": {
+      "$ref": "#/$defs/WireSequence_ContributingMetricFields_",
       "default": []
     },
-    "source_id": {
+    "dataset_hashes": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Dataset Hashes",
+      "type": "object"
+    },
+    "dispersion": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "const": "unsupported"
+        }
+      ],
+      "title": "Dispersion"
+    },
+    "environment": {
+      "$ref": "#/$defs/EnvironmentFields"
+    },
+    "excluded_count": {
+      "minimum": 0,
+      "title": "Excluded Count",
+      "type": "integer"
+    },
+    "goal_hash": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Goal Hash"
+    },
+    "goal_pack_version": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Goal Pack Version"
+    },
+    "judge_set": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JudgeSetFields"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "judge_validity_factor": {
+      "default": 1.0,
+      "maximum": 1.0,
+      "minimum": 0.05,
+      "title": "Judge Validity Factor",
+      "type": "number"
+    },
+    "machine_fingerprint": {
       "minLength": 1,
-      "title": "Source Id",
+      "title": "Machine Fingerprint",
+      "type": "string"
+    },
+    "measured_at": {
+      "format": "date-time",
+      "title": "Measured At",
+      "type": "string"
+    },
+    "model": {
+      "$ref": "#/$defs/ModelIdentityFields"
+    },
+    "policy_version": {
+      "minLength": 1,
+      "title": "Policy Version",
+      "type": "string"
+    },
+    "prompt_subset_hashes": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Prompt Subset Hashes",
+      "type": "object"
+    },
+    "runtime_profile_hash": {
+      "minLength": 1,
+      "title": "Runtime Profile Hash",
+      "type": "string"
+    },
+    "sample_count": {
+      "minimum": 0,
+      "title": "Sample Count",
+      "type": "integer"
+    },
+    "score": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Score",
+      "type": "number"
+    },
+    "score_method_mix": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Score Method Mix"
+    },
+    "source_run_ids": {
+      "$ref": "#/$defs/WireSequence_str_",
+      "default": []
+    },
+    "uncalibrated": {
+      "default": false,
+      "title": "Uncalibrated",
+      "type": "boolean"
+    },
+    "vocabulary_version": {
+      "minLength": 1,
+      "title": "Vocabulary Version",
       "type": "string"
     }
   },
   "required": [
-    "source_id",
-    "complete"
+    "model",
+    "runtime_profile_hash",
+    "machine_fingerprint",
+    "capability_id",
+    "score",
+    "confidence",
+    "sample_count",
+    "excluded_count",
+    "dispersion",
+    "measured_at",
+    "computed_at",
+    "policy_version",
+    "vocabulary_version",
+    "environment"
   ],
-  "title": "benchmark.evidence_bundle",
+  "title": "capability.evidence",
   "type": "object"
 }

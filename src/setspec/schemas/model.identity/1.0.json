@@ -2,7 +2,7 @@
   "$comment": "setspec model.identity 1.0 — generated from the writer model.",
   "$defs": {
     "WireEnum_IdentityConfidence_": {
-      "description": "How firmly an identity pins down a specific set of weights.\n\nStored alongside every measurement. A ``NAME_ONLY`` result carries a permanent caveat: the\nprovider exposed no digest, so it can never be proven later to describe the same weights —\na tag such as ``qwen3.5:latest`` can be repointed at any time. LoadCoach reduces evidence\nconfidence for it and FreeWeight shows it in the UI\n([ADR-0017](../../docs/adr/0017-benchmark-confidence-and-freshness.md)).",
+      "description": "How firmly an identity pins down a specific set of weights.\n\nStored alongside every measurement. A ``NAME_ONLY`` result carries a permanent caveat: the\nprovider exposed no digest, so it can never be proven later to describe the same weights —\na tag such as ``qwen3.5:latest`` can be repointed at any time. LoadCoach reduces evidence\nconfidence for it and FreeWeight shows it in the UI\n(ADR-0017).",
       "enum": [
         "digest",
         "name_only"
@@ -11,7 +11,7 @@
       "type": "string"
     },
     "WireEnum_ModelCapabilityFlag_": {
-      "description": "A capability a provider *claims* a model has, distinct from a measured capability.\n\nFreeWeight's benchmark results record what a model can *demonstrably* do; this flag records\nonly what the provider *says* it can do. The two are never conflated\n(``docs/architecture/canonical-model-identity.md`` §3).",
+      "description": "A capability a provider *claims* a model has, distinct from a measured capability.\n\nFreeWeight's benchmark results record what a model can *demonstrably* do; this flag records\nonly what the provider *says* it can do. The two are never conflated\n(canonical model identity §3).",
       "enum": [
         "tools",
         "vision",

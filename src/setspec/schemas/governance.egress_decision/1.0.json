@@ -1,0 +1,145 @@
+{
+  "$comment": "setspec governance.egress_decision 1.0 — generated from the writer model.",
+  "$defs": {
+    "EgressRequestFields": {
+      "additionalProperties": true,
+      "description": "What was evaluated: which run, which data, headed where.\n\nAttributes:\n    run_id: The trajectory or stage-attempt identity this request was evaluated for.\n    source_ref: A finer locator within the run — a turn id, step id or stage id.\n    data_classification: How sensitive the data under evaluation is. Required and\n        non-nullable: an evaluated request always declares a classification, unlike a\n        target's ceiling, which may legitimately be absent.\n    target: Where the data was headed.",
+      "properties": {
+        "data_classification": {
+          "$ref": "#/$defs/WireEnum_DataClassification_"
+        },
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "source_ref": {
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/EgressTargetFields"
+        }
+      },
+      "required": [
+        "run_id",
+        "source_ref",
+        "data_classification",
+        "target"
+      ],
+      "title": "EgressRequestFields",
+      "type": "object"
+    },
+    "EgressTargetFields": {
+      "additionalProperties": true,
+      "description": "Where a decision's data was headed.\n\nAttributes:\n    name: The target's own name — a tier name for PromptCadence, a backend name for\n        IdeaPress. Caller-defined; SetSpec imposes no vocabulary on it.\n    remote: Whether this target leaves the local machine.\n    max_data_classification: The declared ceiling, or ``None`` when the target declares\n        none. **Nullable, deliberately**: \"remote with no declared ceiling\" is the fail-closed\n        case ``OrderedClassificationPolicy`` must be able to deny and record, not a value this\n        schema can require away (ADR-0054 rule 3).\n    provider_kind: The provider kind serving this target, when known.",
+      "properties": {
+        "max_data_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WireEnum_DataClassification_"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "provider_kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Kind"
+        },
+        "remote": {
+          "title": "Remote",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "remote"
+      ],
+      "title": "EgressTargetFields",
+      "type": "object"
+    },
+    "WireEnum_DataClassification_": {
+      "description": "How sensitive a body of data is: an ordered rank, fixed for the life of the suite.\n\nThree levels, deliberately: fewer cannot express the shipped tier ladder (a local tier serves\nanything, a cheap remote tier serves up to internal, a frontier tier serves public only), and\nmore would be levels no operator can distinguish in practice. **The ordering is the contract**\n— adding a level is a new ADR, not a minor release, because a new member has to be given a\nposition and every value stored under the old vocabulary acquires a new meaning relative to it.\n\nThe lattice join every consumer needs is the built-in :func:`max`::\n\n    >>> from baseaicore import DataClassification as DC\n    >>> max(DC.PUBLIC, DC.CONFIDENTIAL)\n    <DataClassification.CONFIDENTIAL: 'confidential'>\n\nOrdering is by **rank**, never by the member's string value — alphabetically\n``\"confidential\" < \"internal\" < \"public\"``, which is exactly backwards. That trap is why the\nfour ordering operators are defined here rather than inherited from :class:`str`, and why\ncomparing a member against a bare string **raises** instead of quietly answering\nalphabetically.\n\nThe default, wherever one is needed, is :attr:`CONFIDENTIAL`: an undeclared classification is\nthe most restrictive one, so an omission costs a user a remote tier rather than costing them\ntheir data. Callers own that default — this type does not impose it, because the type has no\n\"absent\" member and deliberately never will.\n\nThis is a rank, not a taxonomy. It answers \"how far may this travel\", and it says nothing about\nwhich regulation covers the data or what kind of data it is; a deployment that needs kinds\ncarries them as metadata beside the rank, never as a second vocabulary that also claims to\ngovern egress.",
+      "enum": [
+        "public",
+        "internal",
+        "confidential"
+      ],
+      "title": "DataClassification",
+      "type": "string"
+    },
+    "WireEnum_EgressVerdict_": {
+      "description": "The three outcomes a recorded egress decision may hold (SpotCheck spec §7).\n\n``VIOLATION`` is writable but never produced by the shipped policy — it is written by a\ncaller's verification step after the fact, when it finds egress that policy never approved\n(ADR-0054 rule 7). A schema that could not express it would be wrong: the payload's job is to\ncarry whatever was decided, not to second-guess which verdicts are plausible.",
+      "enum": [
+        "approved",
+        "denied",
+        "violation"
+      ],
+      "title": "EgressVerdict",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "decided_at": {
+      "format": "date-time",
+      "title": "Decided At",
+      "type": "string"
+    },
+    "decision_id": {
+      "minLength": 1,
+      "title": "Decision Id",
+      "type": "string"
+    },
+    "policy_name": {
+      "minLength": 1,
+      "title": "Policy Name",
+      "type": "string"
+    },
+    "policy_version": {
+      "minLength": 1,
+      "title": "Policy Version",
+      "type": "string"
+    },
+    "reason": {
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "request": {
+      "$ref": "#/$defs/EgressRequestFields"
+    },
+    "verdict": {
+      "$ref": "#/$defs/WireEnum_EgressVerdict_"
+    }
+  },
+  "required": [
+    "decision_id",
+    "request",
+    "verdict",
+    "reason",
+    "policy_name",
+    "policy_version",
+    "decided_at"
+  ],
+  "title": "governance.egress_decision",
+  "type": "object"
+}

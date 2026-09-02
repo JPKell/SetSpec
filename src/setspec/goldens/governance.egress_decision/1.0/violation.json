@@ -1,0 +1,19 @@
+{
+  "decided_at": "2026-09-02T10:00:00.000Z",
+  "decision_id": "dec_01JZK2Q",
+  "policy_name": "PostHocVerification",
+  "policy_version": "1.0",
+  "reason": "local_tier_turn_answered_by_remote_provider",
+  "request": {
+    "data_classification": "confidential",
+    "run_id": "run_01JZK2Q",
+    "source_ref": "trajectory_9.turn_2",
+    "target": {
+      "max_data_classification": "public",
+      "name": "tools.agent.local_fast",
+      "provider_kind": "openai_compatible",
+      "remote": true
+    }
+  },
+  "verdict": "violation"
+}

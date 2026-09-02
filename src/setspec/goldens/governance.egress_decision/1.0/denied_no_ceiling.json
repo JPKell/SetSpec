@@ -1,0 +1,19 @@
+{
+  "decided_at": "2026-09-02T09:06:01.000Z",
+  "decision_id": "dec_01JZK2P",
+  "policy_name": "OrderedClassificationPolicy",
+  "policy_version": "1.0",
+  "reason": "no_ceiling_declared",
+  "request": {
+    "data_classification": "internal",
+    "run_id": "run_01JZK2P",
+    "source_ref": "trajectory_7.turn_4",
+    "target": {
+      "max_data_classification": null,
+      "name": "tools.agent.remote_frontier",
+      "provider_kind": "openai_compatible",
+      "remote": true
+    }
+  },
+  "verdict": "denied"
+}

@@ -140,10 +140,12 @@ SUPPORTED_SCHEMAS: Final[Mapping[str, Mapping[int, SchemaVersion]]] = MappingPro
         "machine.profile": MappingProxyType({1: SchemaVersion(1, 0)}),
         "benchmark.result": MappingProxyType({1: SchemaVersion(1, 0)}),
         "benchmark.run_summary": MappingProxyType({1: SchemaVersion(1, 0)}),
-        "capability.evidence": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "capability.evidence": MappingProxyType({1: SchemaVersion(1, 1)}),
         "benchmark.evidence_bundle": MappingProxyType({1: SchemaVersion(1, 0)}),
         "benchmark.goal_pack": MappingProxyType({1: SchemaVersion(1, 0)}),
         "benchmark.calibration_report": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "model.adapter_manifest": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "governance.egress_decision": MappingProxyType({1: SchemaVersion(1, 0)}),
     }
 )
 """Every payload type this build can read, as ``{schema name: {major: highest known minor}}``.
@@ -161,18 +163,26 @@ precisely when **no** evidence was emitted: a goal below its calibration gate pr
 record at all, so without a separate schema the most informative outcome a user can get would have
 no wire form.
 
-**Frozen (as of `0.3.0`, Phase 4).** Every entry above is `1.0` and none is a draft any more:
-:data:`DRAFT_SCHEMAS` is empty, each version has a committed JSON Schema and at least three golden
-payloads under :mod:`setspec.artifacts`, and the ordinary rules now apply without exception — a
-new optional field is a minor bump, and a removal, rename, retype or tightening is a major. A
-reader pinning to ``1.0`` is pinning to a shape this build cannot change without publishing a new
-version, which is what the snapshot contract test enforces (ADR-0009 rule 7).
+**Frozen (as of `0.3.0`, Phase 4), plus two additive changes at Phase 6.** No registered major has
+ever moved and none is a draft any more: :data:`DRAFT_SCHEMAS` is empty, each version has a
+committed JSON Schema and at least three golden payloads under :mod:`setspec.artifacts`, and the
+ordinary rules apply without exception — a new optional field is a minor bump, and a removal,
+rename, retype or tightening is a major. A reader pinning to a published version is pinning to a
+shape this build cannot change without publishing a new one, which is what the snapshot contract
+test enforces (ADR-0009 rule 7).
 
-Two payload types remain unregistered at `0.3.0`: ``event.envelope`` and ``error.envelope`` arrive
-in Phase 3, and ``prompt.record``/``prompt.manifest`` in Phase 5. Naming them here before their
-fields exist would be the same guess Phase 2's own risk note warns against, one layer up. Their
-absence is why the freeze covers eight payload types rather than the eleven ADR-0009 lists: a
-schema is frozen by being published, and an unwritten one has nothing to publish.
+Phase 6 (ADR-0058, ADR-0061, ADR-0065) adds the optional adapter axis: ``capability.evidence``
+gains its first minor since the freeze — `1.1`, an optional ``adapter`` field, absent and
+byte-identical to `1.0` on every record measured on a bare base — and two schemas are new outright:
+``model.adapter_manifest`` `1.0`, the operator-reviewed manifest a directory of adapters is built
+from, and ``governance.egress_decision`` `1.0`, SetSpec's first payload under a root other than
+``benchmark``/``capability``/``machine``/``model`` (ADR-0051 §4). Every other entry is unchanged.
+
+Two payload types remain unregistered even after Phase 6: ``event.envelope`` and ``error.envelope``
+were planned for Phase 3, which was never implemented (see ``src/setspec/event/v1.py`` and
+``error/v1.py``). Naming them here before their fields exist would be the same guess Phase 2's own
+risk note warns against, one layer up: a schema is frozen by being published, and an unwritten one
+has nothing to publish.
 
 A :func:`load_envelope` call naming a schema that is not registered raises
 :class:`~setspec.errors.SchemaVersionUnsupported` with an empty ``supported`` list, which reads as
@@ -184,11 +194,13 @@ gets for a schema retired in a future major.
 DRAFT_SCHEMAS: Final[frozenset[str]] = frozenset()
 """Which registered schemas are still provisional, and may change shape without a major bump.
 
-**Empty as of `0.3.0` — this is the freeze.** Every registered schema is a published `1.0` with a
-committed JSON Schema and goldens behind it, so none may be reshaped in place any more. The set
-survives its own emptiness on purpose: it is the mechanism a *future* draft uses, and deleting it
-would mean the next provisional payload type either ships silently provisional or invents a second
-way of saying so.
+**Empty as of `0.3.0` — this is the freeze.** Every registered schema is a published version with a
+committed JSON Schema and goldens behind it, so none may be reshaped in place any more; a payload
+grows only by an additive minor (``capability.evidence`` `1.1`, Phase 6) or by a wholly new schema
+starting at `1.0`, never by editing a published version in place. The set survives its own
+emptiness on purpose: it is the mechanism a *future* draft uses, and deleting it would mean the
+next provisional payload type either ships silently provisional or invents a second way of saying
+so.
 
 [Development plan Phase 2](../../docs/packages/setspec/development-plan.md) requires draft status
 to be *visible in the API*, not only described in prose, and asks for it to be marked "in

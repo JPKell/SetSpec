@@ -11,20 +11,35 @@ table as its direct source, not this module's own judgment.
 **Status: frozen (`1.0`).** See :mod:`setspec.model.v1` for what the freeze binds this module to.
 FreeWeight's real aggregation — the thing this module was written ahead of — reached
 [Phase 4](../../../docs/packages/setspec/development-plan.md) needing no field reshaped, which is
-what the freeze records.
+what the freeze records. ``CapabilityEvidenceFields`` itself is never edited again, and neither is
+its use inside :class:`EvidenceBundleFields` — both keep meaning exactly what they mean today.
+
+[Phase 6](../../../docs/packages/setspec/development-plan.md) adds `1.1` alongside it, as
+:class:`CapabilityEvidenceV1_1Fields`: an optional ``adapter`` field (ADR-0058), absent — and
+therefore byte-for-byte identical to `1.0` — on every record measured on a bare base. This is the
+package's first minor bump on an already-frozen payload, and a **new, version-suffixed symbol**
+rather than an edit in place is the pattern future minors should follow, for a structural reason:
+:class:`EvidenceBundleFields` embeds ``CapabilityEvidenceFields`` *by reference*, so generating its
+JSON Schema walks into that class's own fields and docstring. Editing ``CapabilityEvidenceFields``
+in place — even just its docstring — would silently change the committed
+``benchmark.evidence_bundle`` `1.0` snapshot too, a schema this row does not touch and FreeWeight
+does not export adapter-bearing bundles into until LA3. A sibling class, left to inherit
+unchanged, is what keeps that blast radius at zero. Producers wanting the `1.1` shape import
+:data:`CapabilityEvidenceV1_1Out` / :data:`CapabilityEvidenceV1_1In` explicitly;
+:data:`CapabilityEvidenceOut` / :data:`CapabilityEvidenceIn` keep meaning `1.0`, exactly as today.
 """
 
 from __future__ import annotations
 
-from typing import Self
+from typing import Any, Self
 
 from baseaicore import CapabilityId
 from baseaicore import ValidationError as SuiteValidationError
-from pydantic import Field, model_validator
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
 from setspec import vocabulary
 from setspec.base import PayloadDefinition, WireSequence, payload_models
-from setspec.model.v1 import ModelIdentityFields
+from setspec.model.v1 import AdapterIdentityFields, ModelIdentityFields
 from setspec.provenance import EnvironmentFields
 from setspec.serialization import MeasurementField, TimestampField
 
@@ -33,6 +48,9 @@ __all__ = [
     "CapabilityEvidenceFields",
     "CapabilityEvidenceIn",
     "CapabilityEvidenceOut",
+    "CapabilityEvidenceV1_1Fields",
+    "CapabilityEvidenceV1_1In",
+    "CapabilityEvidenceV1_1Out",
     "ContributingMetricFields",
     "EvidenceBundleFields",
     "EvidenceBundleIn",
@@ -360,15 +378,54 @@ class CapabilityEvidenceFields(PayloadDefinition):
 
 
 CapabilityEvidenceOut, CapabilityEvidenceIn = payload_models(CapabilityEvidenceFields)
-"""The ``capability.evidence`` payload pair: ``Out`` for writers, ``In`` for readers."""
+"""The ``capability.evidence`` `1.0` payload pair: ``Out`` for writers, ``In`` for readers."""
+
+
+class CapabilityEvidenceV1_1Fields(CapabilityEvidenceFields):
+    """Field definitions for ``capability.evidence`` `1.1`; use
+    :data:`CapabilityEvidenceV1_1Out` / :data:`CapabilityEvidenceV1_1In`.
+
+    Adds one optional field to :class:`CapabilityEvidenceFields` (ADR-0058): a record measured on
+    the bare base carries no ``adapter`` and is therefore byte-for-byte what `1.0` writes today —
+    the additive proof this minor bump rests on, golden-tested in
+    ``goldens/capability.evidence/1.0`` (unchanged) versus ``goldens/capability.evidence/1.1``
+    (adding an adapter-bearing example).
+
+    Attributes:
+        adapter: The adapter this measurement was taken under, or ``None`` for the bare base.
+            Evidence on ``(base, adapter)`` applies to that subject and nothing else — not to the
+            bare base, not to a different adapter (ADR-0058 §4, ADR-0059).
+    """
+
+    adapter: AdapterIdentityFields | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_absent_adapter(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """Drop ``adapter`` from the dump when it is absent, rather than emitting ``null``.
+
+        Pydantic's default dump includes every declared field, so a bare ``adapter: None``
+        default would still serialize as an explicit ``"adapter": null`` key — a byte this
+        module's whole `1.0`/`1.1` split exists to avoid. A record with no adapter must dump
+        **exactly** what `1.0` writes today, not `1.0`'s bytes plus one new null (I15, LA0 exit
+        condition). No other field in this package needs this treatment: they all predate the
+        freeze, so their ``null`` was already part of `1.0`'s own shape.
+        """
+        data: dict[str, Any] = handler(self)
+        if self.adapter is None:
+            data.pop("adapter", None)
+        return data
+
+
+CapabilityEvidenceV1_1Out, CapabilityEvidenceV1_1In = payload_models(CapabilityEvidenceV1_1Fields)
+"""The ``capability.evidence`` `1.1` payload pair: ``Out`` for writers, ``In`` for readers."""
 
 
 class EvidenceBundleFields(PayloadDefinition):
     """Field definitions for ``benchmark.evidence_bundle``; use :data:`EvidenceBundleOut` /
     :data:`EvidenceBundleIn`.
 
-    The FreeWeight → LoadCoach payload: many :class:`CapabilityEvidenceFields`, plus the one flag
-    that makes incremental import possible
+    The FreeWeight → LoadCoach payload: many :class:`CapabilityEvidenceFields` records, plus the
+    one flag that makes incremental import possible
     (ADR-0022 §5).
     ``generated_at`` is **not** repeated here: it lives on the enclosing
     :class:`~setspec.envelope.SchemaEnvelope`, and a client stores *that* value to send back as its
@@ -382,7 +439,9 @@ class EvidenceBundleFields(PayloadDefinition):
         complete: ``True`` only for a full export. Only a complete bundle lets a consumer infer
             removal: evidence present locally for this ``source_id`` and absent from a complete
             bundle is marked superseded — never deleted, and never inferred from a partial one.
-        evidence: The evidence records themselves.
+        evidence: The evidence records themselves, at the `1.0` shape this schema has always
+            published — see the module docstring for why this row's `1.1` adapter field does not
+            reach here.
     """
 
     source_id: str = Field(min_length=1)

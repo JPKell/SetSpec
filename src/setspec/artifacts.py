@@ -52,6 +52,8 @@ from setspec.benchmark.v1 import (
 from setspec.capability.v1 import (
     CapabilityEvidenceIn,
     CapabilityEvidenceOut,
+    CapabilityEvidenceV1_1In,
+    CapabilityEvidenceV1_1Out,
     EvidenceBundleIn,
     EvidenceBundleOut,
 )
@@ -63,8 +65,14 @@ from setspec.goal.v1 import (
     GoalPackIn,
     GoalPackOut,
 )
+from setspec.governance.v1 import GovernanceEgressDecisionIn, GovernanceEgressDecisionOut
 from setspec.machine.v1 import MachineProfileIn, MachineProfileOut
-from setspec.model.v1 import ModelIdentityIn, ModelIdentityOut
+from setspec.model.v1 import (
+    AdapterManifestIn,
+    AdapterManifestOut,
+    ModelIdentityIn,
+    ModelIdentityOut,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -98,6 +106,7 @@ inside the document's own ``$defs`` (spec §14).
 """
 
 _VERSION_1_0: Final[SchemaVersion] = SchemaVersion(1, 0)
+_VERSION_1_1: Final[SchemaVersion] = SchemaVersion(1, 1)
 
 _REGISTRY: Final[
     Mapping[str, Mapping[SchemaVersion, tuple[type[PayloadDefinition], type[PayloadDefinition]]]]
@@ -112,7 +121,10 @@ _REGISTRY: Final[
             {_VERSION_1_0: (BenchmarkRunSummaryOut, BenchmarkRunSummaryIn)}
         ),
         "capability.evidence": MappingProxyType(
-            {_VERSION_1_0: (CapabilityEvidenceOut, CapabilityEvidenceIn)}
+            {
+                _VERSION_1_0: (CapabilityEvidenceOut, CapabilityEvidenceIn),
+                _VERSION_1_1: (CapabilityEvidenceV1_1Out, CapabilityEvidenceV1_1In),
+            }
         ),
         "benchmark.evidence_bundle": MappingProxyType(
             {_VERSION_1_0: (EvidenceBundleOut, EvidenceBundleIn)}
@@ -120,6 +132,12 @@ _REGISTRY: Final[
         "benchmark.goal_pack": MappingProxyType({_VERSION_1_0: (GoalPackOut, GoalPackIn)}),
         "benchmark.calibration_report": MappingProxyType(
             {_VERSION_1_0: (CalibrationReportOut, CalibrationReportIn)}
+        ),
+        "model.adapter_manifest": MappingProxyType(
+            {_VERSION_1_0: (AdapterManifestOut, AdapterManifestIn)}
+        ),
+        "governance.egress_decision": MappingProxyType(
+            {_VERSION_1_0: (GovernanceEgressDecisionOut, GovernanceEgressDecisionIn)}
         ),
     }
 )
