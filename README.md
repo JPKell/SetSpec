@@ -2,21 +2,29 @@
 
 Every versioned data contract that crosses an application boundary: benchmark results, capability evidence, event/error envelopes, prompt records.
 
-**Status:** `0.4.0` — Phases 1–2, 3A, 4 and 5 complete, and **the v1.0 contracts are frozen.** Eight
-payload types are published at `1.0` — `model.identity`, `machine.profile`, `benchmark.result`,
-`benchmark.run_summary`, `capability.evidence`, `benchmark.evidence_bundle`,
-`benchmark.goal_pack` and `benchmark.calibration_report` — each with generated JSON Schema and at
-least three golden payloads shipped as package data. `setspec.DRAFT_SCHEMAS` is empty, which is
-where the freeze is readable at runtime rather than only stated here; from now on a new optional
-field is a minor bump and anything else is a major, enforced by a snapshot diff in CI.
+**Status:** `0.5.0` — Phases 1–2, 3A, 4, 5 and 6 complete, and **the v1.0 contracts are frozen**,
+with the first additive minor now published on top of that freeze. Eight payload types remain
+frozen at `1.0` — `model.identity`, `machine.profile`, `benchmark.result`,
+`benchmark.run_summary`, `benchmark.evidence_bundle`,
+`benchmark.goal_pack` and `benchmark.calibration_report`, plus `capability.evidence` itself — each
+with generated JSON Schema and at least three golden payloads shipped as package data.
+`setspec.DRAFT_SCHEMAS` is empty, which is where the freeze is readable at runtime rather than only
+stated here; from now on a new optional field is a minor bump and anything else is a major,
+enforced by a snapshot diff in CI.
+
+Phase 6 (the adapter arc's LA0 checkpoint) adds three things without touching any of the above:
+`capability.evidence` gains an additive `1.1` (an optional `adapter` field, absent — and
+byte-identical to `1.0` — on every record with no adapter); `model.adapter_manifest` `1.0`
+publishes the operator-reviewed record behind one adapter; and `governance.egress_decision` `1.0`
+is the package's first payload under a root other than `benchmark`/`capability`/`machine`/`model`,
+carrying a recorded egress verdict for a reader that has SpotCheck installed or not.
 
 The [schema catalogue](docs/schemas.md) lists every payload type, its artifacts, and the
 cross-field rules the JSON Schema cannot express. Event and error envelopes (Phase 3) are not yet
 written and are therefore not part of the freeze. Prompt records (`setspec.prompts`, Phase 5,
 added in 0.4.0) are shipped: prompt packs with their three content hashes and sandboxed
-rendering; they carry their own record schema version rather than joining the eight frozen
-payload types. See the [development plan](docs/packages/setspec/development-plan.md) for what
-each phase adds.
+rendering; they carry their own record schema version rather than joining the frozen payload types.
+See the [development plan](docs/packages/setspec/development-plan.md) for what each phase adds.
 
 Part of the **Local AI Suite**.
 

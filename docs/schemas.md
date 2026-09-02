@@ -3,11 +3,15 @@
 Every payload type `setspec` publishes, at every version, with the artifacts that make it usable
 from a repository that shares no code with this one.
 
-**Status: frozen at `1.0`** (Phase 4, `setspec 0.3.0`). `DRAFT_SCHEMAS` is empty. From here every
-change follows the ordinary rules: a new optional field is a **minor** bump, and a removed,
-renamed, retyped or newly-tightened field is a **major**. Neither happens by editing a payload
-module in place — the snapshot contract test fails the build if the generated schema stops matching
-the committed one, which is ADR-0009 rule 7 made mechanical.
+**Status: frozen at `1.0`** (Phase 4, `setspec 0.3.0`), **with the first additive minor at Phase 6**
+(`setspec 0.5.0`). `DRAFT_SCHEMAS` is empty. From here every change follows the ordinary rules: a
+new optional field is a **minor** bump, and a removed, renamed, retyped or newly-tightened field is
+a **major**. Neither happens by editing a *published* payload module in place — the snapshot
+contract test fails the build if the generated schema stops matching the committed one, which is
+ADR-0009 rule 7 made mechanical. `capability.evidence` `1.1` (§2.1 below) is the first schema to
+exercise the minor-bump half of that rule, and it does so with a **sibling class**
+(`CapabilityEvidenceV1_1Fields`, alongside the untouched `CapabilityEvidenceFields`) rather than an
+edit in place, precisely so the `1.0` snapshot keeps regenerating identically forever.
 
 ---
 
@@ -33,13 +37,16 @@ an export never depends on a registry being reachable (spec §14).
 | Schema | Version | Python module | Writer / reader | Goldens |
 |---|---|---|---|---|
 | `model.identity` | 1.0 | `setspec.model.v1` | `ModelIdentityOut` / `ModelIdentityIn` | `minimal`, `full`, `unsupported` |
+| `model.adapter_manifest` | 1.0 | `setspec.model.v1` | `AdapterManifestOut` / `AdapterManifestIn` | `minimal`, `full`, `name_only` |
 | `machine.profile` | 1.0 | `setspec.machine.v1` | `MachineProfileOut` / `MachineProfileIn` | `minimal`, `full`, `unsupported` |
 | `benchmark.result` | 1.0 | `setspec.benchmark.v1` | `BenchmarkResultOut` / `BenchmarkResultIn` | `minimal`, `full`, `unsupported` |
 | `benchmark.run_summary` | 1.0 | `setspec.benchmark.v1` | `BenchmarkRunSummaryOut` / `BenchmarkRunSummaryIn` | `minimal`, `full`, `unsupported` |
 | `capability.evidence` | 1.0 | `setspec.capability.v1` | `CapabilityEvidenceOut` / `CapabilityEvidenceIn` | `minimal`, `full`, `goal`, `unsupported` |
+| `capability.evidence` | 1.1 | `setspec.capability.v1` | `CapabilityEvidenceV1_1Out` / `CapabilityEvidenceV1_1In` | `minimal`, `full`, `unsupported` |
 | `benchmark.evidence_bundle` | 1.0 | `setspec.capability.v1` | `EvidenceBundleOut` / `EvidenceBundleIn` | `minimal`, `full`, `unsupported` |
 | `benchmark.goal_pack` | 1.0 | `setspec.goal.v1` | `GoalPackOut` / `GoalPackIn` | `minimal`, `full`, `starter_unforked` |
 | `benchmark.calibration_report` | 1.0 | `setspec.goal.v1` | `CalibrationReportOut` / `CalibrationReportIn` | `minimal`, `full`, `gate_failed` |
+| `governance.egress_decision` | 1.0 | `setspec.governance.v1` | `GovernanceEgressDecisionOut` / `GovernanceEgressDecisionIn` | `minimal`, `full`, `denied_no_ceiling`, `violation` |
 
 ### `model.identity` — which weights, plus what the provider says about them
 
@@ -49,6 +56,20 @@ an export never depends on a registry being reachable (spec §14).
 pure functions of it, carried on the wire for convenience rather than as independent facts
 (ADR-0024). Every descriptor quantity defaults to `"unsupported"`, because a provider that reports
 no layer count has not reported zero layers.
+
+### `model.adapter_manifest` — the operator-reviewed record behind one adapter
+
+7 required of 10 (ADR-0061 rule 1). `name`, `artifact_sha256` and `source_sha256` are validated by
+reconstructing a `baseaicore.AdapterIdentity` from them — the same reuse
+`model.identity`'s `canonical_id` check performs, so the name pattern and digest normalization are
+never implemented twice. `base` names the model this adapter was trained against, at
+`digest`-or-`name_only` confidence exactly like `model.identity`'s own triple, but with no
+`provider_kind` — the manifest states a base, not which provider serves it.
+`declared_capabilities` is validated strictly against the current vocabulary, with no
+forward-compatibility exception: a manifest carries no `vocabulary_version` to prove it was written
+against a newer minor. **`data_classification` is required, with no default** — a manifest that
+omits it is invalid, not defaulted closed, because ADR-0046's fail-closed default governs a caller
+declaring its own data, not a manifest declaring an artifact's provenance (ADR-0065 rule 1).
 
 ### `machine.profile` — where a measurement happened
 
@@ -85,13 +106,28 @@ The **goal-sourced group** (ADR-0032 §5) is optional and absent on an ordinary 
 golden populates all of it; `uncalibrated: true` is **refused** rather than published, because a
 goal below its calibration gate emits no record at all.
 
+**`1.1`** (ADR-0058) adds one further optional field, `adapter` — the measurement's adapter axis,
+absent on a record measured on the bare base. It is a genuine second minor on an already-frozen
+payload, not folded into the `1.0` freeze the way the goal group was, so it lives on a **sibling
+class** (`CapabilityEvidenceV1_1Fields(CapabilityEvidenceFields)`, in the same module) rather than
+an edit to `CapabilityEvidenceFields` itself: that class is nested by reference inside
+`EvidenceBundleFields`, so editing it in place would silently move `benchmark.evidence_bundle`'s
+own committed `1.0` schema too. `CapabilityEvidenceV1_1Fields` also carries a `@model_serializer`
+that drops `adapter` from the dump entirely when absent, rather than emitting `"adapter": null` —
+the byte-level proof that a non-adapter record written through the `1.1` model is indistinguishable
+from what `1.0` writes (I15, [adapter-roadmap §7](../../../docs/roadmap/adapter-roadmap.md)).
+Producers wanting the `1.1` shape import `CapabilityEvidenceV1_1Out` / `CapabilityEvidenceV1_1In`
+explicitly; `CapabilityEvidenceOut` / `CapabilityEvidenceIn` keep meaning `1.0`.
+
 ### `benchmark.evidence_bundle` — the FreeWeight → LoadCoach payload
 
 2 required of 3: `source_id`, `complete`, `evidence`. `complete: true` is what lets a consumer
 infer removal — evidence held locally for this `source_id` and absent from a complete bundle is
 marked superseded, never deleted, and never inferred from a partial bundle. The bundle carries no
 `generated_at`: that lives on the envelope, and a client stores *that* value to send back as its
-next `?since=`.
+next `?since=`. `evidence` nests `capability.evidence` at its `1.0` shape — this schema is
+untouched by Phase 6; a bundle carrying `1.1`'s optional `adapter` field is future work (adapter
+roadmap LA3, FreeWeight 1.1), not this row's.
 
 ### `benchmark.goal_pack` — a user-authored goal, portable and hash-pinned
 
@@ -107,6 +143,20 @@ meaningful precisely when **no** evidence was emitted: `gate_failed` is the gold
 outcome `capability.evidence` deliberately cannot express (ADR-0032 §3). The verdict must follow
 from the numbers — a `passed_gate` that contradicts `weighted_kappa_w` against `min_agreement` is
 refused.
+
+### `governance.egress_decision` — one recorded verdict on "may this leave the machine"
+
+All 7 fields required; the only nullable one is `request.target.max_data_classification`, and
+deliberately so — "remote with no declared ceiling" is the fail-closed case SpotCheck's shipped
+policy must be able to deny and record, not a value this schema forbids (ADR-0054 rule 3). This is
+SetSpec's fifth owned root — the first outside `benchmark`/`capability`/`machine`/`model` — added
+because the payload has a named second reader: IdeaPress's S4 egress badge reads decisions
+PromptCadence exported, with SpotCheck not installed (ADR-0051 §4). `verdict` is `approved`,
+`denied` or `violation`; `violation` is writable but never produced by the shipped policy — it is
+written by a caller's own verification step after the fact (ADR-0054 rule 7), and the schema
+carries whatever `reason` that step supplies rather than validating it against the shipped policy's
+four reasons. SpotCheck does not exist as code yet; this module has no dependency on it and is
+exercised only from within this repository.
 
 ## 3. Consuming these from another repository
 
@@ -153,9 +203,11 @@ none of the following appears in the published documents and all of them are enf
 |---|---|
 | `metric.value` (nested) | A real value needs ≥ 1 supported sample; an unsupported value needs 0; dispersion needs ≥ 2 |
 | `model.identity` | `canonical_id` and `identity_confidence` must agree with the identity triple |
+| `model.adapter_manifest` | `name`/`artifact_sha256`/`source_sha256` must pass `baseaicore.AdapterIdentity`; `base.identity_confidence` must agree with whether `base.artifact_digest` is present; every `declared_capabilities` entry must be a known, non-bare-reserved-root vocabulary term |
 | `benchmark.result` | `runtime_profile_hash` must recompute from `runtime_profile`; `completed_at ≥ started_at`; `completed_cases ≤ total_cases`; `skip_reason` iff skipped; a completed result has metrics |
 | `benchmark.run_summary` | `runtime_profile_hash` agreement; timing order |
 | `capability.evidence` | `capability_id` in the vocabulary; `measured_at ≤ computed_at`; the five goal-group coherence rules; `score_method_mix` sums to 1 over known rungs |
+| `capability.evidence` `1.1` (nested `adapter`) | `canonical_suffix` must recompute from `name`/`artifact_digest` via `baseaicore.AdapterIdentity` |
 | `benchmark.goal_pack` | Criterion weights sum to 1; no duplicate keys; rung-appropriate fields; a judged criterion needs a jury |
 | `benchmark.calibration_report` | The gate verdict must follow from `weighted_kappa_w` against `min_agreement` |
 
@@ -169,9 +221,14 @@ version. `SUPPORTED_SCHEMAS` declares supported **majors**; `PUBLISHED_SCHEMAS` 
 versions that have artifacts. A contract test asserts the two agree, so a schema that can be
 negotiated but not validated — or validated but not negotiated — fails the build.
 
-Adding a version means adding a module (`setspec.benchmark.v2`), registering it, and committing its
-schema and goldens. The old version stays importable for at least one minor release of every
-consumer (ADR-0009 rule 6).
+Adding a **major** version means adding a module (`setspec.benchmark.v2`), registering it, and
+committing its schema and goldens. The old version stays importable for at least one minor release
+of every consumer (ADR-0009 rule 6). Adding a **minor** to an already-frozen payload — `1.1` of
+something already published — follows the narrower pattern Phase 6 established for
+`capability.evidence`: a sibling field-definition class in the *same* module, subclassing the
+frozen one and adding only optional fields, registered as a second entry in `artifacts._REGISTRY`
+alongside the untouched original. The frozen class is never edited, so nothing that nests it by
+reference (as `benchmark.evidence_bundle` nests `capability.evidence`) moves with it.
 
 Regenerate the snapshots after any deliberate model change:
 

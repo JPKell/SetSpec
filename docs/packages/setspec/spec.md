@@ -99,6 +99,11 @@ CapabilityEvidence       # normative field set in ADR-0022: identity triple + ca
                          #   measurement), goal_hash, goal_pack_version, score_method_mix,
                          #   judge_set, calibration, uncalibrated (refused as True: the gate
                          #   withholds the record rather than discounting it)
+                         # `1.1` (ADR-0058, Phase 6) adds one further optional field on a sibling
+                         #   class, CapabilityEvidenceV1_1 (…V1_1Out/…V1_1In): adapter, the
+                         #   optional adapter axis (AdapterIdentity below), absent — and
+                         #   byte-identical to `1.0` — on a bare-base record. The bare
+                         #   CapabilityEvidence name keeps meaning `1.0`.
 GoalPack                 # benchmark.goal_pack — a user-authored goal, portable and hash-pinned
                          # (ADR-0031 §6): slug, goal_hash, criteria with their ladder rung and
                          # weight, tasks, judge_set. The author's grades do NOT travel with it.
@@ -109,6 +114,21 @@ PromptRecord             # the prompt record schema (ADR-0028)
 PromptManifest           # pack manifest, prompt_subset_hash helper
 MachineProfilePayload    # exchange form of baseaicore.MachineProfile
 ModelIdentityPayload     # exchange form of baseaicore.ModelIdentity + descriptor snapshot
+AdapterIdentity          # model.identity's adapter-axis sibling (ADR-0058): the nested exchange
+                         # form of baseaicore.AdapterIdentity — name, artifact_digest,
+                         # source_digest, canonical_suffix (materialized and checked, like
+                         # ModelIdentity's canonical_id). Embedded on CapabilityEvidence `1.1`.
+AdapterManifest          # model.adapter_manifest (ADR-0061 rule 1, Phase 6): name, artifact_file,
+                         # artifact_sha256, source_sha256, base (provider model name + optional
+                         # artifact digest, at digest-or-name_only confidence),
+                         # declared_capabilities, data_classification (required, no default —
+                         # ADR-0065 rule 1), format (fixed "gguf"), created_at, notes
+GovernanceEgressDecision # governance.egress_decision (ADR-0051 §4, ADR-0054, Phase 6): decision_id,
+                         # request (run_id, source_ref, data_classification, target{name, remote,
+                         # max_data_classification, provider_kind}), verdict
+                         # (approved | denied | violation), reason, policy_name, policy_version,
+                         # decided_at. SetSpec's first payload outside the
+                         # benchmark/capability/machine/model roots.
 EventEnvelope            # SSE and job/run event payloads
 ErrorEnvelope            # the object inside {"error": {…}} — a shape, transported UNWRAPPED
                          # (ADR-0025 §4); never itself put in a SetSpec envelope
@@ -173,6 +193,16 @@ Owns the **schemas**, not the data. It never persists anything.
    needs: the existing open-ended specialization rule accepts every future goal without a
    further vocabulary change, and no shipped benchmark maps onto it
    ([ADR-0032 §1](../../adr/0032-judge-validity-and-user-capability-namespace.md)).
+9. An additive minor on an **already-published** payload is byte-identical on every document that
+   does not use the new field, proved by golden — not merely structurally compatible. Since
+   [Phase 4](development-plan.md)'s freeze, this is implemented as a sibling field-definition
+   class in the same module (`CapabilityEvidenceV1_1Fields`, subclassing the untouched
+   `CapabilityEvidenceFields`), never as an edit to the published class in place: a definition
+   nested by reference inside another payload (`capability.evidence` inside
+   `benchmark.evidence_bundle`) must not have its shape move when the *other* schema is untouched.
+   Where the new field's own default is not itself a wire value the old version could produce
+   (`None` meaning "absent," not "present and null"), the model suppresses it from the dump rather
+   than emitting it — first exercised at `capability.evidence` `1.1` (ADR-0058).
 
 ## 12. Configuration
 
@@ -246,7 +276,18 @@ Coverage floor: **95 %**.
 * A schema change without a version bump fails CI (snapshot diff).
 * Coexisting majors live in versioned modules (`setspec.benchmark.v1`, `.v2`) and both are exported
   for at least one minor release of every consumer.
+* Coexisting **minors** of an already-published payload live as sibling classes in the *same*
+  module (`CapabilityEvidenceFields` for `1.0`, `CapabilityEvidenceV1_1Fields` for `1.1`), the
+  older one left untouched. First exercised at [Phase 6](development-plan.md): `capability.evidence`
+  went from a single published version to two (`1.0` and `1.1`) without either's committed JSON
+  Schema or goldens moving.
 * The schema compatibility job validates every published version against its goldens on every CI run.
+* A dependency version bump can change a generated schema's `description` text without changing any
+  payload's shape, when that text is drawn from the dependency's own docstrings (pydantic embeds an
+  enum's `__doc__` in its JSON Schema). This is not a schema version bump trigger — the committed
+  snapshot is still regenerated and re-committed, and the change is verified structurally identical
+  (same properties, types and required fields) before it is. Observed at Phase 6 against
+  `baseaicore 0.4.1`.
 
 ## 20. Acceptance criteria
 

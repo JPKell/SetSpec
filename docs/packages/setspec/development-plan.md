@@ -291,3 +291,124 @@ needing the same.
 **Known risks:** Jinja2 entering SetSpec's dependency set. Accepted in
 [ADR-0028](../../adr/0028-prompt-pack-granularity.md); the alternative was three implementations of a
 determinism contract.
+
+---
+
+## Phase 6 — The adapter axis's contracts (LA0, joint with PromptCadence Phase 0)
+
+**Goal:** the adapter arc has a wire form before any component serves, routes on, or benchmarks an
+adapter — contracts precede consumers, the standing rule the adapter roadmap states outright for
+LA0. A `setspec`-only reader can validate a manifest and an adapter-bearing evidence record, and
+today's evidence records are provably unmoved.
+
+**Prerequisites:** Phase 4 (the `1.0` freeze this phase's additive minor builds on); `baseaicore
+0.4.1` published, carrying `AdapterIdentity`, `DataClassification` and `normalize_digest`
+([ADR-0058](../../adr/0058-the-execution-subject-gains-an-adapter-axis.md)).
+
+**Work**
+* `capability.evidence` `1.1`: one optional field, `adapter: AdapterIdentityFields | None`, on a
+  **new sibling class** (`CapabilityEvidenceV1_1Fields`) rather than an edit to the frozen
+  `CapabilityEvidenceFields` — the latter is nested by reference inside `EvidenceBundleFields`, so
+  editing it in place would have silently moved `benchmark.evidence_bundle`'s own committed `1.0`
+  schema. `benchmark.evidence_bundle` is untouched by this phase; it keeps nesting the `1.0` shape,
+  and gaining the adapter field there is FreeWeight 1.1's work (LA3), not LA0's. A
+  `@model_serializer` drops `adapter` from the dump entirely when absent, so a non-adapter record
+  written through the `1.1` model is byte-identical to what `1.0` writes — not merely
+  structurally compatible, literally the same bytes.
+* `AdapterIdentityFields` (`setspec.model.v1`): the nested exchange form of
+  `baseaicore.AdapterIdentity` — `name`, `artifact_digest`, optional `source_digest`,
+  `canonical_suffix` (materialized and checked, like `model.identity`'s `canonical_id`).
+* `model.adapter_manifest` `1.0` (`setspec.model.v1`): `AdapterManifestFields` per
+  [ADR-0061](../../adr/0061-the-adapter-registry-is-a-directory-and-a-manifest.md) rule 1 —
+  `name`, `artifact_file`, `artifact_sha256`, optional `source_sha256`, `base`
+  (`AdapterManifestBaseFields`: provider model name, optional artifact digest, checked identity
+  confidence), `declared_capabilities` (validated strictly against the current vocabulary, no
+  forward-compatibility exception), `data_classification` (**required, no schema default** —
+  [ADR-0065](../../adr/0065-an-adapter-is-classified-and-local-only.md) rule 1), `format`
+  (fixed `"gguf"`), `created_at`, `notes`. `name`/`artifact_sha256`/`source_sha256` are validated
+  by reconstructing a `baseaicore.AdapterIdentity`, reusing its name-pattern and
+  digest-normalization rules instead of a second implementation.
+* `governance.egress_decision` `1.0` (new module, `setspec.governance.v1`): SetSpec's fifth owned
+  root, per [ADR-0051](../../adr/0051-plans-stay-internal-and-one-payload-travels.md) §4 —
+  `decision_id`, `request` (`run_id`, `source_ref`, `data_classification`, `target{name, remote,
+  max_data_classification, provider_kind}`), `verdict` (`approved`/`denied`/`violation`, a local
+  `EgressVerdict` `StrEnum` — SetSpec cannot import SpotCheck, which does not exist as code yet),
+  `reason`, `policy_name`, `policy_version`, `decided_at`. `target.max_data_classification` is the
+  only nullable field: the fail-closed "remote with no declared ceiling" case
+  ([ADR-0054](../../adr/0054-spotcheck-records-egress-it-does-not-enforce-it.md) rule 3) must be
+  representable, not schema-refused. No cross-field "approved implies a ceiling" validator was
+  added: that is `OrderedClassificationPolicy`'s behaviour, and a caller running a different,
+  legitimate policy must not have its decisions rejected by the wire shape.
+* Register all three in `SUPPORTED_SCHEMAS` (`capability.evidence` → highest known minor `1.1`;
+  the two new schemas → `1.0`) and in `artifacts._REGISTRY`/`PUBLISHED_SCHEMAS`. JSON Schema and
+  ≥ 3 goldens each: `capability.evidence/1.1` (`minimal`, `full` — adapter-bearing, `unsupported`),
+  `model.adapter_manifest/1.0` (`minimal` — name-only base, `full` — digest-verified base,
+  `name_only` — a second name-only example with lineage and multiple declared capabilities),
+  `governance.egress_decision/1.0` (`minimal`, `full`, `denied_no_ceiling`, `violation`).
+
+**Files/subsystems**
+```text
+src/setspec/model/v1.py            # + AdapterIdentityFields, AdapterManifestBaseFields,
+                                    #   AdapterManifestFields, AdapterManifestOut/In
+src/setspec/capability/v1.py       # + CapabilityEvidenceV1_1Fields, …V1_1Out/In
+src/setspec/governance/v1.py       # new module
+src/setspec/envelope.py            # SUPPORTED_SCHEMAS entries
+src/setspec/artifacts.py           # _REGISTRY entries
+src/setspec/schemas/{capability.evidence/1.1,model.adapter_manifest/1.0,
+                      governance.egress_decision/1.0}.json
+src/setspec/goldens/{capability.evidence/1.1,model.adapter_manifest/1.0,
+                      governance.egress_decision/1.0}/*.json
+tests/unit/{test_payloads_capability.py (extended), test_payloads_governance.py (new)}
+tests/contract/test_adapter_axis_i15.py     # the exit condition, spelled out explicitly
+```
+
+**Tests**
+* Round-trip for every new/extended model, including the adapter-absent and adapter-present cases.
+* `test_adapter_axis_i15.py`: every committed `capability.evidence/1.0` golden dumps
+  byte-identically whether validated through the `1.0` model or the `1.1` model; a manifest golden
+  and an adapter-bearing evidence golden validate through `setspec` alone.
+* `AdapterManifestFields`: digest-verified base and name-only base both validate; a missing
+  `data_classification` is refused and names the field; a bare reserved capability root is
+  refused; a malformed name or digest is refused via the underlying `AdapterIdentity` check.
+* `GovernanceEgressDecisionFields`: all three verdicts validate; a remote target with no declared
+  ceiling validates (the fail-closed case is representable); an unknown verdict is refused.
+* Updated cross-cutting contract tests: the schema-snapshot suite's "everything is frozen at 1.0"
+  assertion is split into "no major has ever moved" (permanent) and "every pre-Phase-6 schema is
+  still exactly 1.0" (an explicit, named exception for `capability.evidence`); the
+  minimal-vs-full golden-size check compares serialized bytes rather than top-level key count,
+  since `governance.egress_decision` has no optional top-level field for "minimal" to omit.
+
+**Acceptance criteria**
+1. I15 (adapter-roadmap §7): a `setspec`-only reader validates the manifest and adapter-evidence
+   goldens, and today's evidence records round-trip byte-identically — proven by a dedicated test
+   over the *existing* committed `1.0` goldens, not by argument.
+2. `capability.evidence/1.0.json` and every `benchmark.evidence_bundle` artifact are unchanged
+   (modulo the unrelated `baseaicore 0.4.1` docstring refresh described below).
+3. Every §20 criterion in the [spec](spec.md) continues to hold, including for the two new schemas.
+4. Full gate green: `ruff format --check`, `ruff check`, `mypy --strict`, `lint-imports`,
+   `pytest -m "not live and not performance"`, coverage ≥ 95 %.
+
+**Known risks:** a dependency-version bump rippling into a frozen schema's committed snapshot
+through no fault of this phase's own field changes — realized during this phase, not merely
+anticipated: `baseaicore 0.4.1` changed two enum docstrings
+(`IdentityConfidence`, `ModelCapabilityFlag`), and pydantic embeds an enum's docstring as its JSON
+Schema `description`. Five already-frozen snapshots
+(`model.identity`, `benchmark.result`, `benchmark.run_summary`, `capability.evidence/1.0`,
+`benchmark.evidence_bundle`) therefore needed regenerating — confirmed, before committing, to be
+identical once `description` fields are stripped from the comparison, i.e. no property, type or
+required-field moved. This is not a payload shape change and not a version bump trigger; it is
+recorded here because "the committed snapshot didn't match the model" is exactly the failure this
+phase's own machinery is built to catch, and the reason mattered enough to state rather than to
+silently regenerate past.
+**Likely failure modes:** editing `CapabilityEvidenceFields` in place instead of subclassing it
+(silently moves `benchmark.evidence_bundle`'s frozen schema); a schema default on
+`data_classification` (reintroduces the fail-open gap ADR-0065 rule 1 closes); validating
+`declared_capabilities` with the forward-compatibility exception (the manifest carries no
+`vocabulary_version` to justify it); a cross-field "approved requires a ceiling" validator on
+`governance.egress_decision` (rejects a legitimate document from a caller's own, non-shipped
+policy — SetSpec carries the shape, not SpotCheck's opinion of it).
+**Gold standards:** additive means byte-identical where nothing changed, not merely
+schema-compatible; a payload's shape says only what every legitimate producer could write, never
+one policy's opinion of what a valid decision looks like.
+**Deferred:** `benchmark.evidence_bundle` gaining the adapter field (LA3, FreeWeight 1.1); SpotCheck
+itself, which this phase publishes the shape for but does not implement.
