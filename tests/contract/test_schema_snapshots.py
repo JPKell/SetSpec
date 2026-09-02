@@ -128,16 +128,41 @@ class TestTheRegistryAndTheWireAgree:
 
 
 class TestTheFreezeHolds:
-    """Phase 4's freeze, asserted rather than described."""
+    """Phase 4's freeze, asserted rather than described.
+
+    The freeze was never "nothing may be published past `1.0`" — it was "nothing already
+    published may be reshaped in place, and a major never moves without a new module" (ADR-0009
+    rules 2 and 6). Phase 6 exercises the additive half of that promise for the first time:
+    ``capability.evidence`` gains a `1.1` alongside its untouched `1.0`. What must stay true, and
+    is asserted below, is narrower and permanent: every published major is still `1`, and every
+    schema that predates Phase 6 is still exactly `1.0`.
+    """
 
     def test_no_schema_is_still_a_draft(self) -> None:
         """`DRAFT_SCHEMAS` empty is the freeze. A name reappearing here re-opens a frozen shape."""
         assert DRAFT_SCHEMAS == frozenset()
 
     @pytest.mark.parametrize(("schema", "version"), _PUBLISHED)
-    def test_every_frozen_schema_is_a_1_0(self, schema: str, version: SchemaVersion) -> None:
-        """The freeze promoted `1.0-draft` to `1.0`; nothing was published at any other version."""
+    def test_no_published_major_has_ever_moved(self, schema: str, version: SchemaVersion) -> None:
+        """A major bump would mean a frozen payload's meaning changed; none ever has."""
+        assert version.major == 1
+
+    @pytest.mark.parametrize(
+        ("schema", "version"),
+        [param for param in _PUBLISHED if param.id != "capability.evidence 1.1"],
+    )
+    def test_every_schema_that_predates_phase_6_is_still_1_0(
+        self, schema: str, version: SchemaVersion
+    ) -> None:
+        """The one exception — `capability.evidence` `1.1` — is asserted separately, by name."""
         assert version == SchemaVersion(1, 0)
+
+    def test_capability_evidence_is_the_one_schema_with_a_second_published_minor(self) -> None:
+        """Phase 6's additive minor, named explicitly rather than inferred from a count."""
+        assert PUBLISHED_SCHEMAS["capability.evidence"] == (
+            SchemaVersion(1, 0),
+            SchemaVersion(1, 1),
+        )
 
 
 class TestMetricKeyIsTheSpelling:

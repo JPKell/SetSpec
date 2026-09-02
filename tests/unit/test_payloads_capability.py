@@ -1,10 +1,12 @@
-"""Tests for ``model.identity``, ``machine.profile``, ``capability.evidence`` and
-``benchmark.evidence_bundle`` (:mod:`setspec.model.v1`, :mod:`setspec.machine.v1`,
-:mod:`setspec.capability.v1`).
+"""Tests for ``model.identity``, ``model.adapter_manifest``, ``machine.profile``,
+``capability.evidence`` (`1.0` and `1.1`) and ``benchmark.evidence_bundle``
+(:mod:`setspec.model.v1`, :mod:`setspec.machine.v1`, :mod:`setspec.capability.v1`).
 
 ``benchmark.result`` and ``benchmark.run_summary`` (:mod:`setspec.benchmark.v1`) have their own
 file, ``test_payloads_benchmark.py``, since a realistic result is large enough to want its own
-fixture builder.
+fixture builder. ``governance.egress_decision`` (:mod:`setspec.governance.v1`) has its own file,
+``test_payloads_governance.py``, since it is a new namespace root rather than an extension of one
+already tested here.
 """
 
 from __future__ import annotations
@@ -20,11 +22,19 @@ from setspec import canonical_dumps
 from setspec.capability.v1 import (
     CapabilityEvidenceIn,
     CapabilityEvidenceOut,
+    CapabilityEvidenceV1_1In,
+    CapabilityEvidenceV1_1Out,
     EvidenceBundleIn,
     EvidenceBundleOut,
 )
 from setspec.machine.v1 import MachineProfileIn, MachineProfileOut
-from setspec.model.v1 import ModelIdentityIn, ModelIdentityOut
+from setspec.model.v1 import (
+    AdapterIdentityFields,
+    AdapterManifestIn,
+    AdapterManifestOut,
+    ModelIdentityIn,
+    ModelIdentityOut,
+)
 
 _OBSERVED_AT = datetime(2026, 8, 20, 9, 0, 0, tzinfo=UTC)
 
@@ -409,3 +419,199 @@ class TestSharedEnvironmentBlock:
         assert (
             CapabilityEvidenceOut.model_validate(json.loads(canonical_dumps(evidence))) == evidence
         )
+
+
+_ADAPTER_DIGEST = "sha256:" + "9e2b41d07c55" + "0" * 52
+
+
+def _adapter(**overrides: Any) -> dict[str, Any]:
+    """A minimal, valid adapter identity, embeddable on a `1.1` evidence record."""
+    return {
+        "name": "factcheck",
+        "artifact_digest": _ADAPTER_DIGEST,
+        "source_digest": None,
+        "canonical_suffix": "+factcheck@sha256:9e2b41d07c55",
+    } | overrides
+
+
+class TestAdapterIdentity:
+    """The nested wire form of ``baseaicore.AdapterIdentity`` (ADR-0058)."""
+
+    def test_a_minimal_adapter_identity_round_trips(self) -> None:
+        identity = AdapterIdentityFields.model_validate(_adapter())
+        assert AdapterIdentityFields.model_validate(json.loads(canonical_dumps(identity))) == (
+            identity
+        )
+
+    def test_canonical_suffix_must_match_the_recomputed_identity(self) -> None:
+        with pytest.raises(PydanticValidationError, match="canonical_suffix"):
+            AdapterIdentityFields.model_validate(
+                _adapter(canonical_suffix="+wrong@sha256:aaaaaaaaaaaa")
+            )
+
+    def test_a_malformed_name_is_rejected_by_the_underlying_domain_type(self) -> None:
+        """baseaicore.AdapterIdentity's own validation surfaces through, not reimplemented here."""
+        with pytest.raises(PydanticValidationError):
+            AdapterIdentityFields.model_validate(_adapter(name="Not-Valid"))
+
+    def test_a_malformed_digest_is_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            AdapterIdentityFields.model_validate(_adapter(artifact_digest="not-a-digest"))
+
+    def test_source_digest_is_optional(self) -> None:
+        identity = AdapterIdentityFields.model_validate(
+            _adapter(source_digest="sha256:" + "c1" * 32)
+        )
+        assert identity.source_digest is not None
+
+
+class TestCapabilityEvidenceV1_1:
+    """The optional ``adapter`` field this row adds — additive proof, not merely a new field."""
+
+    def test_a_record_with_no_adapter_dumps_byte_identical_to_1_0(self) -> None:
+        """The literal I15 promise: a `1.1` writer with no adapter reproduces `1.0`'s bytes."""
+        document = _evidence()
+        old = CapabilityEvidenceOut.model_validate(document)
+        new = CapabilityEvidenceV1_1Out.model_validate(document)
+        assert new.adapter is None
+        assert canonical_dumps(old) == canonical_dumps(new)
+
+    def test_adapter_is_absent_from_the_dump_rather_than_null(self) -> None:
+        new = CapabilityEvidenceV1_1Out.model_validate(_evidence())
+        assert "adapter" not in json.loads(canonical_dumps(new))
+
+    def test_a_record_with_an_adapter_round_trips(self) -> None:
+        evidence = CapabilityEvidenceV1_1Out.model_validate(_evidence(adapter=_adapter()))
+        assert evidence.adapter is not None
+        assert evidence.adapter.name == "factcheck"
+        assert (
+            CapabilityEvidenceV1_1Out.model_validate(json.loads(canonical_dumps(evidence)))
+            == evidence
+        )
+
+    def test_adapter_present_in_the_dump_when_set(self) -> None:
+        new = CapabilityEvidenceV1_1Out.model_validate(_evidence(adapter=_adapter()))
+        assert json.loads(canonical_dumps(new))["adapter"]["name"] == "factcheck"
+
+    def test_a_1_0_reader_preserves_an_unknown_adapter_field(self) -> None:
+        """A `1.0` reader in front of a `1.1` document loses nothing (ADR-0009 rule 4)."""
+        document = _evidence(adapter=_adapter())
+        parsed = CapabilityEvidenceIn.model_validate(document)
+        assert parsed.extras["adapter"] == _adapter()
+
+    def test_in_preserves_an_unknown_field_alongside_adapter(self) -> None:
+        evidence = CapabilityEvidenceV1_1In.model_validate(
+            _evidence(adapter=_adapter(), future_field=1)
+        )
+        assert evidence.extras == {"future_field": 1}
+
+
+_MANIFEST_CREATED_AT = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
+
+
+def _manifest(**overrides: Any) -> dict[str, Any]:
+    """A minimal, valid model.adapter_manifest document with a name-only base."""
+    return {
+        "name": "factcheck",
+        "artifact_file": "factcheck.gguf",
+        "artifact_sha256": _ADAPTER_DIGEST,
+        "source_sha256": None,
+        "base": {
+            "provider_model_name": "gemma-3-12b-it-Q4_K_M.gguf",
+            "artifact_digest": None,
+            "identity_confidence": "name_only",
+        },
+        "declared_capabilities": [],
+        "data_classification": "confidential",
+        "format": "gguf",
+        "created_at": _MANIFEST_CREATED_AT.isoformat(),
+        "notes": None,
+    } | overrides
+
+
+class TestAdapterManifest:
+    """ADR-0061 rule 1's field list, and ADR-0065 rule 1's required-classification rule."""
+
+    def test_a_name_only_manifest_round_trips(self) -> None:
+        manifest = AdapterManifestOut.model_validate(_manifest())
+        assert AdapterManifestOut.model_validate(json.loads(canonical_dumps(manifest))) == manifest
+        assert manifest.base.identity_confidence.value == "name_only"
+
+    def test_a_digest_verified_base_round_trips(self) -> None:
+        digest = "sha256:" + "a1" * 32
+        manifest = AdapterManifestOut.model_validate(
+            _manifest(
+                base={
+                    "provider_model_name": "gemma-3-12b-it-Q4_K_M.gguf",
+                    "artifact_digest": digest,
+                    "identity_confidence": "digest",
+                }
+            )
+        )
+        assert manifest.base.artifact_digest == digest
+
+    def test_data_classification_is_required_with_no_default(self) -> None:
+        """ADR-0065 rule 1: an omitted classification is invalid, never a silent default."""
+        document = _manifest()
+        del document["data_classification"]
+        with pytest.raises(PydanticValidationError, match="data_classification"):
+            AdapterManifestOut.model_validate(document)
+
+    def test_a_malformed_base_digest_is_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError, match="artifact_digest"):
+            AdapterManifestOut.model_validate(
+                _manifest(
+                    base={
+                        "provider_model_name": "gemma-3-12b-it-Q4_K_M.gguf",
+                        "artifact_digest": "not-a-digest",
+                        "identity_confidence": "digest",
+                    }
+                )
+            )
+
+    def test_base_confidence_must_match_digest_presence(self) -> None:
+        with pytest.raises(PydanticValidationError, match="identity_confidence"):
+            AdapterManifestOut.model_validate(
+                _manifest(
+                    base={
+                        "provider_model_name": "gemma-3-12b-it-Q4_K_M.gguf",
+                        "artifact_digest": None,
+                        "identity_confidence": "digest",
+                    }
+                )
+            )
+
+    def test_a_malformed_name_is_refused_via_adapter_identity(self) -> None:
+        """Reuses baseaicore.AdapterIdentity's own validation rather than a second one."""
+        with pytest.raises(PydanticValidationError):
+            AdapterManifestOut.model_validate(_manifest(name="Not-Valid"))
+
+    def test_a_bare_reserved_capability_root_is_refused(self) -> None:
+        with pytest.raises(PydanticValidationError, match="reserved"):
+            AdapterManifestOut.model_validate(_manifest(declared_capabilities=["user"]))
+
+    def test_an_unknown_capability_root_is_refused(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            AdapterManifestOut.model_validate(
+                _manifest(declared_capabilities=["not_a_real_capability"])
+            )
+
+    def test_a_known_specialization_is_accepted(self) -> None:
+        manifest = AdapterManifestOut.model_validate(
+            _manifest(declared_capabilities=["user.house_voice", "creative_writing"])
+        )
+        assert "user.house_voice" in manifest.declared_capabilities
+
+    def test_format_defaults_to_gguf(self) -> None:
+        document = _manifest()
+        del document["format"]
+        manifest = AdapterManifestOut.model_validate(document)
+        assert manifest.format == "gguf"
+
+    def test_in_preserves_an_unknown_field(self) -> None:
+        manifest = AdapterManifestIn.model_validate(_manifest(future_field="x"))
+        assert manifest.extras == {"future_field": "x"}
+
+    def test_out_refuses_an_unknown_field(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            AdapterManifestOut.model_validate(_manifest(future_field="x"))

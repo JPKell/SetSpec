@@ -108,10 +108,16 @@ class TestEveryVersionPublishesEnoughGoldens:
     def test_the_minimal_golden_is_actually_smaller_than_the_full_one(
         self, schema: str, version: SchemaVersion
     ) -> None:
-        """Otherwise "minimal" is a name rather than a case, and the range is untested."""
+        """Otherwise "minimal" is a name rather than a case, and the range is untested.
+
+        Compared by serialized size, not top-level key count: a payload whose every top-level
+        field is required (``governance.egress_decision``, whose optional fields all sit one
+        level down, inside ``target``) has the same key count either way, and a key-count
+        comparison would report no difference where a real one exists.
+        """
         minimal = _golden(schema, version, "minimal")
         full = _golden(schema, version, "full")
-        assert len(minimal) < len(full)
+        assert len(json.dumps(minimal)) < len(json.dumps(full))
 
 
 class TestEveryGoldenValidates:

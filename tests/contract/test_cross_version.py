@@ -156,7 +156,11 @@ class TestANewerMajorIsRejected:
             load_envelope(document, expect=schema)
         assert raised.value.details["schema"] == schema
         assert raised.value.details["received"] == str(next_major)
-        assert str(version) in raised.value.details["supported"]
+        # Named by SUPPORTED_SCHEMAS's recorded minor for this major, not by the specific
+        # golden's own version: a major with more than one published version (capability.evidence
+        # 1.0 and 1.1) still reports one "supported" entry per major (the highest known minor),
+        # so a golden at an older minor is checked against that, not against itself.
+        assert str(SUPPORTED_SCHEMAS[schema][version.major]) in raised.value.details["supported"]
 
     @pytest.mark.parametrize(("schema", "version"), _ONE_GOLDEN_PER_SCHEMA)
     def test_the_refusal_carries_the_documented_code(
