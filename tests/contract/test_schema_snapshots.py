@@ -127,15 +127,28 @@ class TestTheRegistryAndTheWireAgree:
             assert set(majors) == published_majors
 
 
+_NAMED_EXCEPTIONS = frozenset({"capability.evidence 1.1", "benchmark.evidence_bundle 1.1"})
+"""Every published version that is not exactly `1.0`, and the phase each came from.
+
+``capability.evidence 1.1`` — Phase 6 (ADR-0058): the adapter axis's first landing, an optional
+``adapter`` field on a sibling class. ``benchmark.evidence_bundle 1.1`` — Phase 7 (ADR-0068 rule
+5): the same minor carried one payload out, so an exported bundle can nest adapter-bearing
+records. Both are additive and both leave their `1.0` sibling untouched; extend this set by name,
+never by widening the test below to a count, when a third minor is published.
+"""
+
+
 class TestTheFreezeHolds:
     """Phase 4's freeze, asserted rather than described.
 
     The freeze was never "nothing may be published past `1.0`" — it was "nothing already
     published may be reshaped in place, and a major never moves without a new module" (ADR-0009
-    rules 2 and 6). Phase 6 exercises the additive half of that promise for the first time:
-    ``capability.evidence`` gains a `1.1` alongside its untouched `1.0`. What must stay true, and
-    is asserted below, is narrower and permanent: every published major is still `1`, and every
-    schema that predates Phase 6 is still exactly `1.0`.
+    rules 2 and 6). Phase 6 exercised the additive half of that promise for the first time:
+    ``capability.evidence`` gained a `1.1` alongside its untouched `1.0`. Phase 7 exercised it
+    again, one payload out: ``benchmark.evidence_bundle`` gained its own `1.1`, nesting the
+    `1.1` evidence shape without moving its `1.0`. What must stay true, and is asserted below, is
+    narrower and permanent: every published major is still `1`, and every schema that is not a
+    named exception is still exactly `1.0`.
     """
 
     def test_no_schema_is_still_a_draft(self) -> None:
@@ -149,17 +162,24 @@ class TestTheFreezeHolds:
 
     @pytest.mark.parametrize(
         ("schema", "version"),
-        [param for param in _PUBLISHED if param.id != "capability.evidence 1.1"],
+        [param for param in _PUBLISHED if param.id not in _NAMED_EXCEPTIONS],
     )
-    def test_every_schema_that_predates_phase_6_is_still_1_0(
+    def test_every_schema_that_is_not_a_named_exception_is_still_1_0(
         self, schema: str, version: SchemaVersion
     ) -> None:
-        """The one exception — `capability.evidence` `1.1` — is asserted separately, by name."""
+        """The named exceptions — `_NAMED_EXCEPTIONS` — are asserted separately, by name."""
         assert version == SchemaVersion(1, 0)
 
-    def test_capability_evidence_is_the_one_schema_with_a_second_published_minor(self) -> None:
-        """Phase 6's additive minor, named explicitly rather than inferred from a count."""
+    def test_capability_evidence_and_evidence_bundle_are_the_schemas_with_a_second_minor(
+        self,
+    ) -> None:
+        """Phase 6's and Phase 7's additive minors, named explicitly rather than inferred from a
+        count — a count would let a fourth published minor land unnoticed later."""
         assert PUBLISHED_SCHEMAS["capability.evidence"] == (
+            SchemaVersion(1, 0),
+            SchemaVersion(1, 1),
+        )
+        assert PUBLISHED_SCHEMAS["benchmark.evidence_bundle"] == (
             SchemaVersion(1, 0),
             SchemaVersion(1, 1),
         )

@@ -1,5 +1,5 @@
 """Tests for ``model.identity``, ``model.adapter_manifest``, ``machine.profile``,
-``capability.evidence`` (`1.0` and `1.1`) and ``benchmark.evidence_bundle``
+``capability.evidence`` (`1.0` and `1.1`) and ``benchmark.evidence_bundle`` (`1.0` and `1.1`)
 (:mod:`setspec.model.v1`, :mod:`setspec.machine.v1`, :mod:`setspec.capability.v1`).
 
 ``benchmark.result`` and ``benchmark.run_summary`` (:mod:`setspec.benchmark.v1`) have their own
@@ -26,6 +26,8 @@ from setspec.capability.v1 import (
     CapabilityEvidenceV1_1Out,
     EvidenceBundleIn,
     EvidenceBundleOut,
+    EvidenceBundleV1_1In,
+    EvidenceBundleV1_1Out,
 )
 from setspec.machine.v1 import MachineProfileIn, MachineProfileOut
 from setspec.model.v1 import (
@@ -373,6 +375,67 @@ class TestEvidenceBundle:
             }
         )
         assert bundle.evidence[0].extras == {"future_field": "x"}
+
+
+class TestEvidenceBundleV1_1:
+    """`benchmark.evidence_bundle` `1.1` (Phase 7, ADR-0068 rule 5): the same sibling-class
+    mechanism as `capability.evidence` `1.1`, one payload out — nesting `1.1` evidence records
+    rather than adding a field of its own."""
+
+    def test_a_bundle_with_no_adapter_dumps_byte_identical_to_1_0(self) -> None:
+        document = {
+            "source_id": "freeweight-main",
+            "complete": True,
+            "evidence": [_evidence(), _evidence(capability_id="reasoning")],
+        }
+        old = EvidenceBundleOut.model_validate(document)
+        new = EvidenceBundleV1_1Out.model_validate(document)
+        assert all(record.adapter is None for record in new.evidence)
+        assert canonical_dumps(old) == canonical_dumps(new)
+
+    def test_a_bundle_with_an_adapter_bearing_record_round_trips(self) -> None:
+        bundle = EvidenceBundleV1_1Out.model_validate(
+            {
+                "source_id": "freeweight-main",
+                "complete": True,
+                "evidence": [_evidence(adapter=_adapter()), _evidence(capability_id="reasoning")],
+            }
+        )
+        assert bundle.evidence[0].adapter is not None
+        assert bundle.evidence[1].adapter is None
+        assert EvidenceBundleV1_1Out.model_validate(json.loads(canonical_dumps(bundle))) == bundle
+
+    def test_adapter_absent_from_the_dump_on_the_bare_base_record_only(self) -> None:
+        bundle = EvidenceBundleV1_1Out.model_validate(
+            {
+                "source_id": "freeweight-main",
+                "complete": True,
+                "evidence": [_evidence(adapter=_adapter()), _evidence(capability_id="reasoning")],
+            }
+        )
+        dumped = json.loads(canonical_dumps(bundle))
+        assert "adapter" in dumped["evidence"][0]
+        assert "adapter" not in dumped["evidence"][1]
+
+    def test_in_preserves_an_unknown_field_alongside_an_adapter_bearing_record(self) -> None:
+        bundle = EvidenceBundleV1_1In.model_validate(
+            {
+                "source_id": "freeweight-main",
+                "complete": True,
+                "evidence": [_evidence(adapter=_adapter(), future_field="x")],
+            }
+        )
+        assert bundle.evidence[0].extras == {"future_field": "x"}
+
+    def test_a_1_0_reader_preserves_an_unknown_adapter_bearing_record(self) -> None:
+        """A `1.0` reader in front of a `1.1` bundle loses nothing (ADR-0009 rule 4)."""
+        document = {
+            "source_id": "freeweight-main",
+            "complete": True,
+            "evidence": [_evidence(adapter=_adapter())],
+        }
+        bundle = EvidenceBundleIn.model_validate(document)
+        assert bundle.evidence[0].extras["adapter"] == _adapter()
 
 
 class TestSharedEnvironmentBlock:

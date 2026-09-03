@@ -13,6 +13,11 @@ disk — **round-trip byte-identically** through the current, adapter-aware buil
 changed, the `1.1` addition was not actually additive, and that is a stop (row constraint), not a
 golden to update.
 
+``test_bundle_minor_is_additive.py`` is this file's Phase 7 sibling, one payload out: it proves
+the same promise for ``benchmark.evidence_bundle`` `1.1`, whose ``evidence`` field nests this
+schema's `1.1` element type rather than the frozen `1.0` one (ADR-0068 rule 5). Kept separate
+because this file is LA0's exit condition and should keep meaning exactly that.
+
 Marked ``contract``.
 """
 
