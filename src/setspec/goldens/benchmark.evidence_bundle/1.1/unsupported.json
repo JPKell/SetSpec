@@ -1,0 +1,73 @@
+{
+  "complete": true,
+  "evidence": [
+    {
+      "adapter": {
+        "artifact_digest": "sha256:b7c94a10de230000000000000000000000000000000000000000000000000000",
+        "canonical_suffix": "+styleguide@sha256:b7c94a10de23",
+        "name": "styleguide",
+        "source_digest": null
+      },
+      "benchmark_versions": {
+        "native.energy": "1.0.0"
+      },
+      "capability_id": "energy_efficiency",
+      "computed_at": "2026-08-21T09:20:00.000Z",
+      "confidence": 0.05,
+      "contributing_metrics": [
+        {
+          "metric_key": "energy_per_token_j",
+          "sample_count": 1,
+          "weight": 1.0
+        }
+      ],
+      "dispersion": "unsupported",
+      "environment": {
+        "cuda_version": null,
+        "gpu_driver_version": null,
+        "os_version": null,
+        "provider_kind": "llamacpp",
+        "provider_version": "b4231"
+      },
+      "excluded_count": 5,
+      "machine_fingerprint": "1a2b3c4d5e6f70819283a4b5c6d7e8f9",
+      "measured_at": "2026-08-21T09:15:00.000Z",
+      "model": {
+        "active_parameter_count": "unsupported",
+        "architecture": null,
+        "artifact_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "attention_heads": "unsupported",
+        "canonical_id": "llamacpp/gemma-3-12b-it-Q4_K_M.gguf@sha256:a1a1a1a1a1a1",
+        "declared_capabilities": [],
+        "embedding_dim": "unsupported",
+        "expert_count": "unsupported",
+        "family": null,
+        "head_dim": "unsupported",
+        "identity_confidence": "digest",
+        "kv_heads": "unsupported",
+        "layers": "unsupported",
+        "license_text": null,
+        "max_context": "unsupported",
+        "observed_at": "2026-08-21T09:14:02.318Z",
+        "parameter_count": "unsupported",
+        "provider_kind": "llamacpp",
+        "provider_model_name": "gemma-3-12b-it-Q4_K_M.gguf",
+        "quantization": null,
+        "rope_config": null,
+        "size_bytes": "unsupported",
+        "sliding_window": "unsupported",
+        "vocab_size": "unsupported",
+        "weight_format": null
+      },
+      "policy_version": "1.0.0",
+      "runtime_profile_hash": "e06e92b4d4803b3b",
+      "sample_count": 1,
+      "score": 0.5,
+      "source_run_ids": [
+        "run_01JC8FZZ"
+      ],
+      "vocabulary_version": "1.1"
+    }
+  ],
+  "source_id": "freeweight-sandbox"
+}
