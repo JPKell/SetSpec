@@ -88,6 +88,12 @@ dump_envelope(payload, *, schema: str, version: SchemaVersion,
 BenchmarkResult          # one benchmark, one measurement subject, metrics + provenance + samples ref
 BenchmarkRunSummary      # one run: subject, suite, status, timings, aggregate metrics
 EvidenceBundle           # many CapabilityEvidence + provenance, the FreeWeight → LoadCoach payload
+                         # `1.1` (ADR-0068 rule 5, Phase 7) nests `1.1` evidence on a sibling
+                         #   class, EvidenceBundleV1_1 (…V1_1Out/…V1_1In): the same `source_id` /
+                         #   `complete` / `evidence` fields, `evidence` now
+                         #   WireSequence[CapabilityEvidenceV1_1], so an exported bundle can carry
+                         #   adapter-bearing records. Absent any adapter, byte-identical to `1.0`.
+                         #   The bare EvidenceBundle name keeps meaning `1.0`.
 CapabilityEvidence       # normative field set in ADR-0022: identity triple + canonical_id +
                          # identity_confidence, runtime_profile_hash, machine_fingerprint,
                          # capability_id, score, confidence, sample_count, excluded_count,
@@ -207,7 +213,13 @@ Owns the **schemas**, not the data. It never persists anything.
    bare `CapabilityEvidenceOut`/`In` keep meaning `1.0` permanently, and adopting a minor is an
    explicit import of the version-qualified name, never something a dependency upgrade delivers.
    Carrying a nested payload's new minor into the payload that nests it is that outer payload's
-   own minor, versioned separately (rule 5).
+   own minor, versioned separately (rule 5) — exercised at
+   [Phase 7](development-plan.md): `benchmark.evidence_bundle` `1.1`
+   (`EvidenceBundleV1_1Fields`/`…V1_1Out`/`…V1_1In`) nests `capability.evidence` `1.1` in place of
+   the `1.0` element type its own frozen `1.0` still nests, on the identical sibling-class
+   mechanism — a second, separately-scheduled application of the same rule, not a new one. The
+   frozen `EvidenceBundleFields` is likewise never edited, and `EvidenceBundleOut`/`In` keep
+   meaning `1.0` permanently.
 
 ## 12. Configuration
 
@@ -286,7 +298,13 @@ Coverage floor: **95 %**.
   older one left untouched, and the bare exported name keeps the version it was frozen at
   ([ADR-0068](../../adr/0068-a-post-freeze-minor-is-a-sibling-class.md)). First exercised at
   [Phase 6](development-plan.md): `capability.evidence` went from a single published version to two
-  (`1.0` and `1.1`) without either's committed JSON Schema or goldens moving.
+  (`1.0` and `1.1`) without either's committed JSON Schema or goldens moving. Exercised again,
+  transitively, at [Phase 7](development-plan.md): `benchmark.evidence_bundle` — which nests
+  `capability.evidence` by reference — went from one published version to two
+  (`EvidenceBundleFields` for `1.0`, `EvidenceBundleV1_1Fields` for `1.1`, the latter nesting
+  `CapabilityEvidenceV1_1Fields`) on the same mechanism, confirming rule 5's claim that the
+  nesting payload's own minor is a separate, later decision rather than something the nested
+  payload's minor propagates automatically.
 * The schema compatibility job validates every published version against its goldens on every CI run.
 * A dependency version bump can change a generated schema's `description` text without changing any
   payload's shape, when that text is drawn from the dependency's own docstrings (pydantic embeds an

@@ -425,3 +425,95 @@ rule 5), scheduled as **Phase 7 / `0.6.0`** (row B5 of
 [outstanding-work §1](../../roadmap/outstanding-work.md)) and required before FreeWeight 1.1 can
 export adapter evidence bundled; Commissioner
 itself, which this phase publishes the shape for but does not implement.
+
+## Phase 7 — `benchmark.evidence_bundle` gains the adapter axis (row B5, `0.6.0`)
+
+**Goal:** an exported evidence bundle can carry adapter-bearing evidence records, and every bundle
+that does not is byte-identical to what `1.0` writes today. This is Phase 6's own Deferred item,
+closed: `capability.evidence` `1.1` landed the adapter axis one payload in; this phase carries it
+the one payload out that FreeWeight 1.1's bundled export (H4, LA3) needs.
+
+**Prerequisites:** Phase 6 (`setspec 0.5.0`), published — `CapabilityEvidenceV1_1Fields` on PyPI,
+and [ADR-0068](../../adr/0068-a-post-freeze-minor-is-a-sibling-class.md) as the mechanism this
+phase transcribes against a worked precedent in the same module, rather than inventing its own.
+
+**Work**
+* `EvidenceBundleV1_1Fields(EvidenceBundleFields)` (`setspec.capability.v1`): overrides exactly
+  one inherited field — `evidence` becomes `WireSequence[CapabilityEvidenceV1_1Fields]` in place
+  of `WireSequence[CapabilityEvidenceFields]`. Same field name, same empty-tuple default; every
+  `1.0` evidence record validates through the wider element type unchanged, because
+  `CapabilityEvidenceV1_1Fields` subclasses the frozen `CapabilityEvidenceFields` adding only an
+  absent-by-default field.
+* `EvidenceBundleFields` itself — fields, validators and docstring — is **not edited**. Its
+  docstring's sentence that the `1.1` adapter field "does not reach here" now describes only
+  `1.0`, and is left exactly as Phase 6 wrote it: editing it would move `benchmark.evidence_bundle
+  1.0`'s committed JSON Schema `description` as a side effect of a change this phase makes to a
+  different, newer version. The resolution is recorded instead in `setspec.capability.v1`'s module
+  docstring (not nested by any schema) and here.
+* No new serializer: `CapabilityEvidenceV1_1Fields`'s existing `@model_serializer(mode="wrap")`
+  (Phase 6) already runs per-element when pydantic dumps the `WireSequence`, so a nested `1.1`
+  record with no adapter already omits the key rather than emitting `null` — asserted by test
+  rather than assumed.
+* `EvidenceBundleV1_1Out`/`In` registered beside the `1.0` pair in `artifacts._REGISTRY`; `envelope
+  .SUPPORTED_SCHEMAS["benchmark.evidence_bundle"]` raised to `{1: SchemaVersion(1, 1)}`.
+* JSON Schema (`schemas/benchmark.evidence_bundle/1.1.json`, generated, never hand-written) and
+  four goldens under `goldens/benchmark.evidence_bundle/1.1/`: `minimal` (byte-identical to the
+  committed `1.0/minimal.json` — an empty bundle is the strongest byte-identity statement
+  available), `full` (every record adapter-bearing, two distinct adapter identities), `mixed`
+  (bare-base and adapter-bearing records in the same bundle — LA3's actual export shape), and
+  `unsupported` (an adapter-bearing record whose measurement fields are `"unsupported"`, mirroring
+  `1.0`'s own `unsupported` golden, needed because the bundle nests `dispersion` and other
+  measurement fields).
+
+**Files/subsystems**
+```text
+src/setspec/capability/v1.py                  # + EvidenceBundleV1_1Fields, …V1_1Out/In
+src/setspec/envelope.py                       # SUPPORTED_SCHEMAS entry raised to 1.1
+src/setspec/artifacts.py                      # _REGISTRY entry
+src/setspec/schemas/benchmark.evidence_bundle/1.1.json
+src/setspec/goldens/benchmark.evidence_bundle/1.1/{minimal,full,mixed,unsupported}.json
+tests/unit/test_payloads_capability.py        # TestEvidenceBundleV1_1 (extended)
+tests/contract/test_schema_snapshots.py       # TestTheFreezeHolds (extended, named exceptions)
+tests/contract/test_bundle_minor_is_additive.py   # new — the bundle's own I15
+```
+
+**Tests**
+* Round-trip for `EvidenceBundleV1_1Out`/`In`, including an adapter-bearing record, a bare-base
+  record in the same bundle, and unknown-field preservation on the `In` side — asserted per class,
+  never across the pair (spec §11 contract 3).
+* `test_bundle_minor_is_additive.py`: every committed `benchmark.evidence_bundle/1.0` golden dumps
+  byte-identically whether validated through `EvidenceBundleOut` or `EvidenceBundleV1_1Out`, over
+  the *existing* committed goldens — the bundle's own I15, cross-referenced with
+  `test_adapter_axis_i15.py` in both files' docstrings rather than merged into it, since that file
+  is LA0's exit condition and should keep meaning exactly that.
+* `TestTheFreezeHolds` in `test_schema_snapshots.py`: the exclusion list is now named exceptions
+  (`capability.evidence 1.1`, `benchmark.evidence_bundle 1.1`) rather than a single hard-coded ID,
+  and the "one schema with a second minor" assertion now names both payloads and their published
+  version tuples explicitly — never relaxed to a count, which would let a third minor land
+  unnoticed.
+* `test_goldens.py`'s minimal-vs-full size check and `_EVERY_GOLDEN`/`_PUBLISHED` parametrizations
+  pick up `1.1` automatically, since both are derived from `PUBLISHED_SCHEMAS`.
+
+**Acceptance criteria**
+1. A `1.1` bundle carrying adapter-bearing evidence validates through `EvidenceBundleV1_1In`; a
+   bundle with no adapter anywhere validates through both `EvidenceBundleIn` and
+   `EvidenceBundleV1_1In`.
+2. Every committed `benchmark.evidence_bundle/1.0` artifact — schema and goldens — is unchanged on
+   disk; `git diff --stat` on the schemas and goldens directories shows only new `1.1` files.
+3. Every §20 criterion in the [spec](spec.md) continues to hold, including for the widened schema.
+4. Full gate green: `ruff format --check`, `ruff check`, `mypy --strict`, `lint-imports`,
+   `pytest -m "not live and not performance"`, coverage ≥ 95 %.
+
+**Known risks:** none realized this phase — no dependency bump landed mid-session, so the
+description-drift case from Phase 6's Known risks did not recur.
+**Likely failure modes:** editing `EvidenceBundleFields` in place instead of subclassing it
+(moves the committed `1.0` snapshot as a side effect); relaxing the schema-snapshot suite's named
+exclusion list to a count (lets a third minor land unnoticed); merging the bundle's byte-identity
+proof into `test_adapter_axis_i15.py` instead of its own module (blurs that file's meaning as
+LA0's exit condition specifically).
+**Gold standards:** additive means byte-identical where nothing changed, not merely
+schema-compatible — proved by golden over the *existing* committed artifacts, not argued from the
+model's shape.
+**Deferred:** FreeWeight's actual bundled export of adapter evidence — importing
+`EvidenceBundleV1_1Out` and writing `1.1` documents — is H4/LA3, not this row; this phase publishes
+the shape only. Commissioner remains unimplemented (row B3).

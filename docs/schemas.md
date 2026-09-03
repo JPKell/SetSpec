@@ -3,15 +3,18 @@
 Every payload type `setspec` publishes, at every version, with the artifacts that make it usable
 from a repository that shares no code with this one.
 
-**Status: frozen at `1.0`** (Phase 4, `setspec 0.3.0`), **with the first additive minor at Phase 6**
-(`setspec 0.5.0`). `DRAFT_SCHEMAS` is empty. From here every change follows the ordinary rules: a
-new optional field is a **minor** bump, and a removed, renamed, retyped or newly-tightened field is
-a **major**. Neither happens by editing a *published* payload module in place — the snapshot
-contract test fails the build if the generated schema stops matching the committed one, which is
-ADR-0009 rule 7 made mechanical. `capability.evidence` `1.1` (§2.1 below) is the first schema to
-exercise the minor-bump half of that rule, and it does so with a **sibling class**
-(`CapabilityEvidenceV1_1Fields`, alongside the untouched `CapabilityEvidenceFields`) rather than an
-edit in place, precisely so the `1.0` snapshot keeps regenerating identically forever.
+**Status: frozen at `1.0`** (Phase 4, `setspec 0.3.0`), **with additive minors at Phase 6 and
+Phase 7** (`setspec 0.5.0` and `0.6.0`). `DRAFT_SCHEMAS` is empty. From here every change follows
+the ordinary rules: a new optional field is a **minor** bump, and a removed, renamed, retyped or
+newly-tightened field is a **major**. Neither happens by editing a *published* payload module in
+place — the snapshot contract test fails the build if the generated schema stops matching the
+committed one, which is ADR-0009 rule 7 made mechanical. `capability.evidence` `1.1` (§2.1 below)
+is the first schema to exercise the minor-bump half of that rule, and it does so with a **sibling
+class** (`CapabilityEvidenceV1_1Fields`, alongside the untouched `CapabilityEvidenceFields`) rather
+than an edit in place, precisely so the `1.0` snapshot keeps regenerating identically forever.
+`benchmark.evidence_bundle` `1.1` (Phase 7) exercises the same rule transitively: it nests
+`capability.evidence` `1.1` in place of the `1.0` element type its own frozen `1.0` still nests,
+on the identical sibling-class mechanism (ADR-0068 rule 5).
 
 ---
 
@@ -44,6 +47,7 @@ an export never depends on a registry being reachable (spec §14).
 | `capability.evidence` | 1.0 | `setspec.capability.v1` | `CapabilityEvidenceOut` / `CapabilityEvidenceIn` | `minimal`, `full`, `goal`, `unsupported` |
 | `capability.evidence` | 1.1 | `setspec.capability.v1` | `CapabilityEvidenceV1_1Out` / `CapabilityEvidenceV1_1In` | `minimal`, `full`, `unsupported` |
 | `benchmark.evidence_bundle` | 1.0 | `setspec.capability.v1` | `EvidenceBundleOut` / `EvidenceBundleIn` | `minimal`, `full`, `unsupported` |
+| `benchmark.evidence_bundle` | 1.1 | `setspec.capability.v1` | `EvidenceBundleV1_1Out` / `EvidenceBundleV1_1In` | `minimal`, `full`, `mixed`, `unsupported` |
 | `benchmark.goal_pack` | 1.0 | `setspec.goal.v1` | `GoalPackOut` / `GoalPackIn` | `minimal`, `full`, `starter_unforked` |
 | `benchmark.calibration_report` | 1.0 | `setspec.goal.v1` | `CalibrationReportOut` / `CalibrationReportIn` | `minimal`, `full`, `gate_failed` |
 | `governance.egress_decision` | 1.0 | `setspec.governance.v1` | `GovernanceEgressDecisionOut` / `GovernanceEgressDecisionIn` | `minimal`, `full`, `denied_no_ceiling`, `violation` |
@@ -125,9 +129,21 @@ explicitly; `CapabilityEvidenceOut` / `CapabilityEvidenceIn` keep meaning `1.0`.
 infer removal — evidence held locally for this `source_id` and absent from a complete bundle is
 marked superseded, never deleted, and never inferred from a partial bundle. The bundle carries no
 `generated_at`: that lives on the envelope, and a client stores *that* value to send back as its
-next `?since=`. `evidence` nests `capability.evidence` at its `1.0` shape — this schema is
-untouched by Phase 6; a bundle carrying `1.1`'s optional `adapter` field is future work (adapter
-roadmap LA3, FreeWeight 1.1), not this row's.
+next `?since=`. `1.0`'s `evidence` nests `capability.evidence` at its `1.0` shape, unchanged since
+Phase 4.
+
+**`1.1`** (Phase 7, ADR-0068 rule 5) carries the adapter axis one payload out from
+`capability.evidence` `1.1`: `EvidenceBundleV1_1Fields(EvidenceBundleFields)` overrides exactly
+one inherited field — `evidence` becomes `WireSequence[CapabilityEvidenceV1_1Fields]` — on a
+**sibling class** rather than an edit to `EvidenceBundleFields` itself, for the same reason
+`capability.evidence` `1.1` is a sibling of its own frozen class: an in-place edit would move a
+committed `1.0` snapshot as a side effect of a change meant for the new minor. A bundle whose
+records carry no adapter dumps byte-for-byte what `1.0` writes, because a `1.1` evidence record
+with no adapter already dumps byte-identically to its `1.0` counterpart — the `mixed` golden shows
+bare-base and adapter-bearing records coexisting in one bundle, which is the shape FreeWeight
+1.1's actual export (adapter roadmap LA3) produces. Producers wanting the `1.1` shape import
+`EvidenceBundleV1_1Out` / `EvidenceBundleV1_1In` explicitly; `EvidenceBundleOut` /
+`EvidenceBundleIn` keep meaning `1.0`.
 
 ### `benchmark.goal_pack` — a user-authored goal, portable and hash-pinned
 

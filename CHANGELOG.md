@@ -7,6 +7,24 @@ packaging and release standards §3.
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-09-02
+
+### Added
+
+- **`benchmark.evidence_bundle` `1.1`** (Phase 7, ADR-0068 rule 5): the adapter axis carried one
+  payload out from `capability.evidence` `1.1`, so an exported bundle can hold adapter-bearing
+  evidence records. `EvidenceBundleV1_1Fields` overrides exactly one inherited field — `evidence`
+  becomes `WireSequence[CapabilityEvidenceV1_1Fields]` in place of the `1.0` element type — on a
+  new sibling class (`EvidenceBundleV1_1Out`/`EvidenceBundleV1_1In`) rather than an edit to the
+  existing `EvidenceBundleFields`/`EvidenceBundleOut`/`EvidenceBundleIn`, which keep meaning `1.0`
+  permanently. A bundle whose records carry no adapter dumps byte-for-byte what `1.0` writes today,
+  because a `1.1` evidence record with no adapter already dumps byte-identically to its `1.0`
+  counterpart — proved over the *existing* committed `1.0` goldens by the new
+  `tests/contract/test_bundle_minor_is_additive.py`, the bundle's own analogue of the `1.1` I15
+  exit-condition test. Mixed bundles — bare-base and adapter-bearing records in the same complete
+  export, the shape FreeWeight 1.1's actual export (H4, LA3) produces — are the intended semantics,
+  golden-tested as `goldens/benchmark.evidence_bundle/1.1/mixed.json`.
+
 ### Changed
 - Every prose reference to the planned "SpotCheck" package renamed to its actual name,
   **Commissioner** — `spotcheck` collided with an unrelated, already-published PyPI package.

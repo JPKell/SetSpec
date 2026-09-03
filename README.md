@@ -2,22 +2,25 @@
 
 Every versioned data contract that crosses an application boundary: benchmark results, capability evidence, event/error envelopes, prompt records.
 
-**Status:** `0.5.0` — Phases 1–2, 3A, 4, 5 and 6 complete, and **the v1.0 contracts are frozen**,
-with the first additive minor now published on top of that freeze. Eight payload types remain
-frozen at `1.0` — `model.identity`, `machine.profile`, `benchmark.result`,
-`benchmark.run_summary`, `benchmark.evidence_bundle`,
-`benchmark.goal_pack` and `benchmark.calibration_report`, plus `capability.evidence` itself — each
-with generated JSON Schema and at least three golden payloads shipped as package data.
-`setspec.DRAFT_SCHEMAS` is empty, which is where the freeze is readable at runtime rather than only
-stated here; from now on a new optional field is a minor bump and anything else is a major,
-enforced by a snapshot diff in CI.
+**Status:** `0.6.0` — Phases 1–2, 3A, 4, 5, 6 and 7 complete, and **the v1.0 contracts are frozen**,
+with two additive minors now published on top of that freeze. Six payload types remain frozen at
+`1.0` only — `model.identity`, `machine.profile`, `benchmark.result`, `benchmark.run_summary`,
+`benchmark.goal_pack` and `benchmark.calibration_report` — each with generated JSON Schema and at
+least three golden payloads shipped as package data. `setspec.DRAFT_SCHEMAS` is empty, which is
+where the freeze is readable at runtime rather than only stated here; from now on a new optional
+field is a minor bump and anything else is a major, enforced by a snapshot diff in CI.
 
 Phase 6 (the adapter arc's LA0 checkpoint) adds three things without touching any of the above:
 `capability.evidence` gains an additive `1.1` (an optional `adapter` field, absent — and
 byte-identical to `1.0` — on every record with no adapter); `model.adapter_manifest` `1.0`
 publishes the operator-reviewed record behind one adapter; and `governance.egress_decision` `1.0`
 is the package's first payload under a root other than `benchmark`/`capability`/`machine`/`model`,
-carrying a recorded egress verdict for a reader that has Commissioner installed or not.
+carrying a recorded egress verdict for a reader that has Commissioner installed or not. Phase 7
+carries that same minor one payload out: `benchmark.evidence_bundle` gains its own additive `1.1`,
+nesting `capability.evidence` `1.1` in place of the `1.0` element type its frozen `1.0` still
+nests, so an exported bundle can now carry adapter-bearing evidence — absent any adapter,
+byte-identical to `1.0`. `capability.evidence` and `benchmark.evidence_bundle` are therefore the
+two payload types with a second published minor; every other payload type remains exactly `1.0`.
 
 The [schema catalogue](docs/schemas.md) lists every payload type, its artifacts, and the
 cross-field rules the JSON Schema cannot express. Event and error envelopes (Phase 3) are not yet
