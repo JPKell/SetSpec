@@ -235,7 +235,7 @@ draft models (FreeWeight P6).
 ```text
 src/setspec/{schemas/**,goldens/**,artifacts.py}
 tests/contract/{test_schema_snapshots,test_goldens,test_cross_version}.py
-docs/schemas.md            # human-readable catalogue of every payload and version
+docs/packages/setspec/schemas.md   # human-readable catalogue of every payload and version
 ```
 
 **Tests**

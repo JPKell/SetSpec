@@ -7,6 +7,14 @@ packaging and release standards §3.
 
 ## [Unreleased]
 
+### Changed
+- `docs/schemas.md` (the schema catalogue) moved to `docs/packages/setspec/schemas.md`, alongside
+  `spec.md` and `development-plan.md`, and joins them as this package's third document mirrored
+  byte-identically from the workspace `docs/` tree — it was previously component-repo-only.
+  `README.md`, `docs/README.md` and the `pyproject.toml` dependency comment updated to the new
+  path; historical references in `CHANGELOG.md` and `PHASE4_ISSUES.md` describing earlier releases
+  are left as they were, since the file really was at the old path then. No wire contract changed.
+
 ## [0.6.0] — 2026-09-02
 
 ### Added

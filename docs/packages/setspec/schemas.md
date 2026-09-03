@@ -119,7 +119,7 @@ an edit to `CapabilityEvidenceFields` itself: that class is nested by reference 
 own committed `1.0` schema too. `CapabilityEvidenceV1_1Fields` also carries a `@model_serializer`
 that drops `adapter` from the dump entirely when absent, rather than emitting `"adapter": null` —
 the byte-level proof that a non-adapter record written through the `1.1` model is indistinguishable
-from what `1.0` writes (I15, [adapter-roadmap §7](../../../docs/roadmap/adapter-roadmap.md)).
+from what `1.0` writes (I15, [adapter-roadmap §7](../../roadmap/adapter-roadmap.md)).
 Producers wanting the `1.1` shape import `CapabilityEvidenceV1_1Out` / `CapabilityEvidenceV1_1In`
 explicitly; `CapabilityEvidenceOut` / `CapabilityEvidenceIn` keep meaning `1.0`.
 

@@ -22,7 +22,7 @@ nests, so an exported bundle can now carry adapter-bearing evidence — absent a
 byte-identical to `1.0`. `capability.evidence` and `benchmark.evidence_bundle` are therefore the
 two payload types with a second published minor; every other payload type remains exactly `1.0`.
 
-The [schema catalogue](docs/schemas.md) lists every payload type, its artifacts, and the
+The [schema catalogue](docs/packages/setspec/schemas.md) lists every payload type, its artifacts, and the
 cross-field rules the JSON Schema cannot express. Event and error envelopes (Phase 3) are not yet
 written and are therefore not part of the freeze. Prompt records (`setspec.prompts`, Phase 5,
 added in 0.4.0) are shipped: prompt packs with their three content hashes and sandboxed
