@@ -141,7 +141,7 @@ SUPPORTED_SCHEMAS: Final[Mapping[str, Mapping[int, SchemaVersion]]] = MappingPro
         "benchmark.result": MappingProxyType({1: SchemaVersion(1, 0)}),
         "benchmark.run_summary": MappingProxyType({1: SchemaVersion(1, 0)}),
         "capability.evidence": MappingProxyType({1: SchemaVersion(1, 1)}),
-        "benchmark.evidence_bundle": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "benchmark.evidence_bundle": MappingProxyType({1: SchemaVersion(1, 1)}),
         "benchmark.goal_pack": MappingProxyType({1: SchemaVersion(1, 0)}),
         "benchmark.calibration_report": MappingProxyType({1: SchemaVersion(1, 0)}),
         "model.adapter_manifest": MappingProxyType({1: SchemaVersion(1, 0)}),
@@ -163,8 +163,8 @@ precisely when **no** evidence was emitted: a goal below its calibration gate pr
 record at all, so without a separate schema the most informative outcome a user can get would have
 no wire form.
 
-**Frozen (as of `0.3.0`, Phase 4), plus two additive changes at Phase 6.** No registered major has
-ever moved and none is a draft any more: :data:`DRAFT_SCHEMAS` is empty, each version has a
+**Frozen (as of `0.3.0`, Phase 4), plus additive changes at Phases 6 and 7.** No registered major
+has ever moved and none is a draft any more: :data:`DRAFT_SCHEMAS` is empty, each version has a
 committed JSON Schema and at least three golden payloads under :mod:`setspec.artifacts`, and the
 ordinary rules apply without exception — a new optional field is a minor bump, and a removal,
 rename, retype or tightening is a major. A reader pinning to a published version is pinning to a
@@ -176,7 +176,11 @@ gains its first minor since the freeze — `1.1`, an optional ``adapter`` field,
 byte-identical to `1.0` on every record measured on a bare base — and two schemas are new outright:
 ``model.adapter_manifest`` `1.0`, the operator-reviewed manifest a directory of adapters is built
 from, and ``governance.egress_decision`` `1.0`, SetSpec's first payload under a root other than
-``benchmark``/``capability``/``machine``/``model`` (ADR-0051 §4). Every other entry is unchanged.
+``benchmark``/``capability``/``machine``/``model`` (ADR-0051 §4). Phase 7 carries that same minor
+one payload out: ``benchmark.evidence_bundle`` gains its own `1.1`, whose ``evidence`` field nests
+`1.1` evidence records instead of `1.0` ones, so an exported bundle can now hold adapter-bearing
+records — a bundle carrying none is byte-identical to what `1.0` writes today (ADR-0068 rule 5).
+Every other entry is unchanged.
 
 Two payload types remain unregistered even after Phase 6: ``event.envelope`` and ``error.envelope``
 were planned for Phase 3, which was never implemented (see ``src/setspec/event/v1.py`` and

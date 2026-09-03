@@ -27,6 +27,21 @@ does not export adapter-bearing bundles into until LA3. A sibling class, left to
 unchanged, is what keeps that blast radius at zero. Producers wanting the `1.1` shape import
 :data:`CapabilityEvidenceV1_1Out` / :data:`CapabilityEvidenceV1_1In` explicitly;
 :data:`CapabilityEvidenceOut` / :data:`CapabilityEvidenceIn` keep meaning `1.0`, exactly as today.
+
+[Phase 7](../../../docs/packages/setspec/development-plan.md) carries that same minor one payload
+out, as :class:`EvidenceBundleV1_1Fields`: `benchmark.evidence_bundle`'s own sibling, nesting
+:class:`CapabilityEvidenceV1_1Fields` in place of the frozen `1.0` element type (ADR-0068 rule 5 —
+a payload nested by reference does not move when *it* gains a minor; carrying the new minor into
+the payload that nests it is that outer payload's own minor, decided and scheduled separately).
+:class:`EvidenceBundleFields` is left exactly as Phase 6 wrote it, docstring included — the
+sentence there that says the `1.1` adapter field "does not reach here" still describes `1.0`, which
+is everything the frozen class means and all it will ever mean. `1.1` is where an adapter-bearing
+record now reaches, on a class that inherits every one of `1.0`'s field declarations and touches
+none of them. :data:`EvidenceBundleOut` / :data:`EvidenceBundleIn` keep meaning `1.0`, permanently;
+a producer wanting to carry adapter evidence inside a bundle imports
+:data:`EvidenceBundleV1_1Out` / :data:`EvidenceBundleV1_1In` explicitly, exactly as adopting the
+`capability.evidence` minor is an explicit import rather than something a dependency upgrade
+delivers.
 """
 
 from __future__ import annotations
@@ -55,6 +70,9 @@ __all__ = [
     "EvidenceBundleFields",
     "EvidenceBundleIn",
     "EvidenceBundleOut",
+    "EvidenceBundleV1_1Fields",
+    "EvidenceBundleV1_1In",
+    "EvidenceBundleV1_1Out",
     "JudgeSetFields",
 ]
 
@@ -451,3 +469,35 @@ class EvidenceBundleFields(PayloadDefinition):
 
 EvidenceBundleOut, EvidenceBundleIn = payload_models(EvidenceBundleFields)
 """The ``benchmark.evidence_bundle`` payload pair: ``Out`` for writers, ``In`` for readers."""
+
+
+class EvidenceBundleV1_1Fields(EvidenceBundleFields):
+    """Field definitions for ``benchmark.evidence_bundle`` `1.1`; use
+    :data:`EvidenceBundleV1_1Out` / :data:`EvidenceBundleV1_1In`.
+
+    Widens :attr:`EvidenceBundleFields.evidence` to admit adapter-bearing records (ADR-0058,
+    [Phase 7](../../../docs/packages/setspec/development-plan.md), ADR-0068 rule 5): the field
+    keeps its name and its empty-tuple default, but each element now validates through
+    :class:`CapabilityEvidenceV1_1Fields` rather than the frozen `1.0` element type — every `1.0`
+    record validates through it unchanged, since :class:`CapabilityEvidenceV1_1Fields` subclasses
+    :class:`CapabilityEvidenceFields` adding only an absent-by-default field. A bundle whose
+    records carry no adapter therefore dumps byte-for-byte what `1.0` writes, because a `1.1`
+    evidence record with no adapter already dumps byte-identically to its `1.0` counterpart
+    (:meth:`CapabilityEvidenceV1_1Fields._omit_absent_adapter` suppresses the key rather than
+    emitting it as ``null``) — proved over the *existing* committed `1.0` goldens by
+    ``tests/contract/test_bundle_minor_is_additive.py``, the analogue of I15 one payload out.
+
+    **Mixed bundles are the intended shape, not an edge case.** A real FreeWeight 1.1 export at
+    LA3 holds evidence measured on bare bases beside evidence measured on ``(base, adapter)``
+    subjects in the same complete export — see
+    ``goldens/benchmark.evidence_bundle/1.1/mixed.json``.
+
+    Attributes:
+        evidence: The evidence records, each independently adapter-bearing or bare-base.
+    """
+
+    evidence: WireSequence[CapabilityEvidenceV1_1Fields] = ()
+
+
+EvidenceBundleV1_1Out, EvidenceBundleV1_1In = payload_models(EvidenceBundleV1_1Fields)
+"""The ``benchmark.evidence_bundle`` `1.1` payload pair: ``Out`` for writers, ``In`` for readers."""

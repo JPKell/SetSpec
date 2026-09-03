@@ -56,6 +56,8 @@ from setspec.capability.v1 import (
     CapabilityEvidenceV1_1Out,
     EvidenceBundleIn,
     EvidenceBundleOut,
+    EvidenceBundleV1_1In,
+    EvidenceBundleV1_1Out,
 )
 from setspec.envelope import SchemaVersion
 from setspec.errors import SchemaVersionUnsupported, ValidationError
@@ -127,7 +129,10 @@ _REGISTRY: Final[
             }
         ),
         "benchmark.evidence_bundle": MappingProxyType(
-            {_VERSION_1_0: (EvidenceBundleOut, EvidenceBundleIn)}
+            {
+                _VERSION_1_0: (EvidenceBundleOut, EvidenceBundleIn),
+                _VERSION_1_1: (EvidenceBundleV1_1Out, EvidenceBundleV1_1In),
+            }
         ),
         "benchmark.goal_pack": MappingProxyType({_VERSION_1_0: (GoalPackOut, GoalPackIn)}),
         "benchmark.calibration_report": MappingProxyType(
