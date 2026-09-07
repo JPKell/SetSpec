@@ -14,6 +14,7 @@ forbidden_modules =
     freeweight
     loadcoach
     ideapress
+    promptcadence
 
 [importlinter:contract:no-capability-packages]
 name = SetSpec must not import capability packages
@@ -25,3 +26,7 @@ forbidden_modules =
     sweatmeter
     weightsdb
     mirrorwall
+    loadledger
+    cutctx
+    toolyard
+    commissioner
