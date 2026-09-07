@@ -3,6 +3,9 @@
 **Sequence position:** second component. Depends on BaseAiCore Phase 4.
 **Target:** `setspec 0.3.0` by the end of Phase 4; `0.4.0` adds `setspec.prompts` during LoadCoach P4
 ([ADR-0028](../../adr/0028-prompt-pack-granularity.md)).
+**Reached, and continued.** Phase 6 (`0.5.0`) added `governance.egress_decision` and
+`model.adapter_manifest` for the two arcs, and Phase 7 (`0.6.0`) added `benchmark.evidence_bundle`
+1.1. **`0.6.0` is published**; the frozen `1.0` payloads are unchanged by either minor.
 
 Note on ordering: SetSpec's *benchmark* payloads cannot be finalized before FreeWeight knows what a
 result contains. This plan therefore ships the envelope and negotiation machinery first (Phase 1),
@@ -113,7 +116,7 @@ constrained models that accept results with missing provenance.
 
 ## Phase 3 — Event and error envelopes
 
-**Goal:** all three applications emit identical event and error shapes over SSE and HTTP.
+**Goal:** every application emits identical event and error shapes over SSE and HTTP.
 
 **Prerequisites:** Phase 1.
 
@@ -150,7 +153,7 @@ tests/unit/{test_events,test_errors}.py
 **Known risks:** event vocabulary drift between applications — mitigated by registering event types
 per application and testing the registry.
 **Likely failure modes:** applications inventing ad-hoc event shapes; error bodies leaking internals.
-**Gold standards:** one envelope, three applications, zero variants.
+**Gold standards:** one envelope, every application, zero variants.
 **Deferred:** per-application event type registries (owned by the applications).
 
 ---
