@@ -15,6 +15,11 @@ packaging and release standards §3.
   path; historical references in `CHANGELOG.md` and `PHASE4_ISSUES.md` describing earlier releases
   are left as they were, since the file really was at the old path then. No wire contract changed.
 
+### Added
+- `tests/unit/test_readme_version.py` — asserts the version README.md states after its `Status:`
+  line equals `__about__.__version__`, so a release cannot leave the README stale (M9 re-audit,
+  row L7).
+
 ## [0.6.0] — 2026-09-02
 
 ### Added
