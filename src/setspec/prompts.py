@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -492,16 +493,6 @@ def load_record(path: Path, *, source: str = "pack") -> PromptRecord:
         PromptPackInvalid: The file is not valid JSON, is missing a required field, declares an
             unsupported ``schema_version``, or its declarations and templates disagree.
     """
-    return _load_record(path, source=source)
-
-
-def _load_record(path: Path, *, source: str) -> PromptRecord:
-    """Parse and validate one record file.
-
-    Raises:
-        PromptPackInvalid: The file is not valid JSON, is missing a required field, declares an
-            unsupported ``schema_version``, or its declarations and templates disagree.
-    """
     try:
         body = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -539,6 +530,16 @@ def _load_record(path: Path, *, source: str) -> PromptRecord:
     )
     _declared_and_used(record, path)
     return record
+
+
+def _shipped_records(root: Path) -> list[PromptRecord]:
+    """Load every record file under ``root`` except its manifest, in path order."""
+    manifest_path = root / "manifest.json"
+    return [
+        load_record(path, source="pack")
+        for path in sorted(root.rglob("*.json"))
+        if path != manifest_path
+    ]
 
 
 class PromptLibrary:
@@ -700,10 +701,7 @@ class PromptLibrary:
 
 def _version_key(version: str) -> tuple[int, ...]:
     """Sort key for a semantic version, falling back to zeros for a non-numeric component."""
-    parts: list[int] = []
-    for component in version.split("."):
-        parts.append(int(component) if component.isdigit() else 0)
-    return tuple(parts)
+    return tuple(int(part) if part.isdigit() else 0 for part in version.split("."))
 
 
 def load_pack(root: Path, *, override_root: Path | None = None) -> PromptLibrary:
@@ -743,11 +741,7 @@ def load_pack(root: Path, *, override_root: Path | None = None) -> PromptLibrary
             f"Prompt pack manifest {manifest_path} is not a JSON object.",
             details={"file": str(manifest_path)},
         )
-    shipped = [
-        _load_record(path, source="pack")
-        for path in sorted(root.rglob("*.json"))
-        if path != manifest_path
-    ]
+    shipped = _shipped_records(root)
     # Checked against the *shipped* records, before overrides are applied: the manifest describes
     # what was installed, and an override deliberately differs from it (prompt standards §6).
     _check_manifest(manifest, shipped, manifest_path)
@@ -756,7 +750,7 @@ def load_pack(root: Path, *, override_root: Path | None = None) -> PromptLibrary
         overrides = {
             record.prompt_id: record
             for record in (
-                _load_record(path, source="user_override")
+                load_record(path, source="user_override")
                 for path in sorted(override_root.glob("*.json"))
             )
         }
@@ -873,12 +867,7 @@ def build_manifest(
             parsed = None
         if isinstance(parsed, dict):
             existing = parsed
-    shipped = [
-        _load_record(path, source="pack")
-        for path in sorted(root.rglob("*.json"))
-        if path != manifest_path
-    ]
-    references = [record.reference for record in shipped]
+    references = [record.reference for record in _shipped_records(root)]
     manifest: dict[str, Any] = {
         "pack_id": str(existing.get("pack_id", root.name)),
         "pack_version": str(existing.get("pack_version", "1.0.0")),
@@ -888,15 +877,14 @@ def build_manifest(
             if generated_at is not None
             else existing.get("generated_at", "1970-01-01T00:00:00Z")
         ),
-        "prompts": [reference.as_json() for reference in sorted(references, key=_reference_key)],
+        # Ordered by (prompt_id, version) so a rebuild is byte-stable.
+        "prompts": [
+            reference.as_json()
+            for reference in sorted(references, key=attrgetter("prompt_id", "version"))
+        ],
         "pack_sha256": pack_hash(references),
     }
     return manifest, _drift(existing, manifest, root)
-
-
-def _reference_key(reference: PromptReference) -> tuple[str, str]:
-    """Order manifest entries by ``(prompt_id, version)`` so a rebuild is byte-stable."""
-    return (reference.prompt_id, reference.version)
 
 
 def _drift(existing: Mapping[str, Any], rebuilt: Mapping[str, Any], root: Path) -> ManifestDrift:

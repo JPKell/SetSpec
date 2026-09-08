@@ -20,10 +20,11 @@ the same function a consumer asking for ``1.0`` does.
 
 **Payload types are not re-exported here.** ``model.identity``, ``machine.profile``,
 ``benchmark.result``, ``benchmark.run_summary``, ``capability.evidence`` and
-``benchmark.evidence_bundle`` (Phase 2), and ``benchmark.goal_pack`` /
-``benchmark.calibration_report`` (ADR-0031), live in their own versioned modules —
+``benchmark.evidence_bundle`` (Phase 2), ``benchmark.goal_pack`` /
+``benchmark.calibration_report`` (ADR-0031), ``model.adapter_manifest`` (ADR-0061) and
+``governance.egress_decision`` (ADR-0051) live in their own versioned modules —
 ``setspec.model.v1``, ``setspec.machine.v1``, ``setspec.benchmark.v1``, ``setspec.capability.v1``,
-``setspec.goal.v1`` — and are imported from there, e.g.
+``setspec.goal.v1``, ``setspec.governance.v1`` — and are imported from there, e.g.
 ``from setspec.capability.v1 import CapabilityEvidenceOut``.
 This is not an oversight: ADR-0009 rule 6
 requires a v1 payload to remain importable as ``setspec.benchmark.v1`` for a deprecation window

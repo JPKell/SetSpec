@@ -23,7 +23,7 @@ and raises pydantic's error, as a pydantic user expects.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from baseaicore import SuiteError, ValidationError
 
@@ -51,18 +51,11 @@ class SchemaVersionUnsupported(SuiteError):
     * ``supported`` — every version this build accepts, formatted, in ascending order. An empty
       list means this build knows the schema name but publishes no version of it yet.
 
+    The message says what was received, what is supported, and what the caller can do — upgrade
+    the reader, or re-export from the producer at an older version.
+
     Attributes:
         code: ``"SCHEMA_VERSION_UNSUPPORTED"``, stable and part of the public contract.
     """
 
     code: ClassVar[str] = "SCHEMA_VERSION_UNSUPPORTED"
-
-    def __init__(self, message: str, *, details: dict[str, Any] | None = None) -> None:
-        """Build the error.
-
-        Args:
-            message: What was received, what is supported, and what the caller can do — upgrade
-                the reader, or re-export from the producer at an older version.
-            details: Structured context; see the class docstring for the keys callers rely on.
-        """
-        super().__init__(message, details=details)

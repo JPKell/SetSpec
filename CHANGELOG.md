@@ -8,6 +8,11 @@ packaging and release standards §3.
 ## [Unreleased]
 
 ### Changed
+- Internal tightening with no wire or behavioural change: `prompts.load_record` is the one record
+  loader (the private twin is gone) and the two pack walkers share one helper; `artifacts` reads
+  package JSON through one function; `SchemaVersionUnsupported` no longer overrides `__init__`
+  only to call the base. The `governance.v1` module docstring no longer claims Commissioner is
+  unimplemented, and the package docstring lists every versioned module.
 - `docs/schemas.md` (the schema catalogue) moved to `docs/packages/setspec/schemas.md`, alongside
   `spec.md` and `development-plan.md`, and joins them as this package's third document mirrored
   byte-identically from the workspace `docs/` tree — it was previously component-repo-only.

@@ -17,9 +17,9 @@ refuse it. The two timestamps answer different questions and a consumer that nee
 ``decided_at`` — ``requested_at`` is when the caller *built* the request, ``decided_at`` is when
 the policy *answered* it, and the gap between them is the evaluation's own latency.
 
-Commissioner does not exist as code yet (it is specified, not implemented — see the workspace
-`CLAUDE.md`), so nothing here imports it and nothing here is exercised by it; this module publishes
-only the shape Commissioner's own ``EgressDecision.to_payload()``/``from_payload()`` will target.
+Nothing here imports Commissioner — the dependency points the other way. This module publishes
+the shape Commissioner's own ``EgressDecision.to_payload()``/``from_payload()`` target, and
+Commissioner's contract tests are what exercise the round trip.
 """
 
 from __future__ import annotations

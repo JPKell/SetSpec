@@ -261,9 +261,7 @@ def json_schema_for(schema: str, version: SchemaVersion) -> dict[str, Any]:
             built without its package data.
     """
     _lookup(schema, version)
-    text = _read_package_file(f"{SCHEMA_PACKAGE_DIR}/{schema}/{version}.json")
-    parsed: dict[str, Any] = json.loads(text)
-    return parsed
+    return _read_package_json(f"{SCHEMA_PACKAGE_DIR}/{schema}/{version}.json")
 
 
 def golden_names(schema: str, version: SchemaVersion) -> tuple[str, ...]:
@@ -308,14 +306,10 @@ def golden_payloads(schema: str, version: SchemaVersion) -> list[dict[str, Any]]
         SchemaVersionUnsupported: If ``schema`` or ``version`` is not published.
         ValidationError: If a committed golden is missing or unparsable.
     """
-    return [_load_golden(schema, version, name) for name in golden_names(schema, version)]
-
-
-def _load_golden(schema: str, version: SchemaVersion, name: str) -> dict[str, Any]:
-    """Read and parse one golden by name."""
-    text = _read_package_file(f"{GOLDEN_PACKAGE_DIR}/{schema}/{version}/{name}.json")
-    parsed: dict[str, Any] = json.loads(text)
-    return parsed
+    return [
+        _read_package_json(f"{GOLDEN_PACKAGE_DIR}/{schema}/{version}/{name}.json")
+        for name in golden_names(schema, version)
+    ]
 
 
 def _is_golden(entry: Any) -> bool:  # noqa: ANN401 — importlib.resources.Traversable
@@ -347,13 +341,10 @@ def _lookup(
     return versions[version]
 
 
-def _read_package_file(relative_path: str) -> str:
-    """Read one package-data file, naming the wheel as the suspect when it is not there."""
-    target = resources.files("setspec")
-    for part in relative_path.split("/"):
-        target = target / part
+def _read_package_json(relative_path: str) -> dict[str, Any]:
+    """Parse one package-data JSON file, naming the wheel as the suspect when it is not there."""
     try:
-        return target.read_text(encoding="utf-8")
+        text = resources.files("setspec").joinpath(relative_path).read_text(encoding="utf-8")
     except (FileNotFoundError, NotADirectoryError) as exc:
         raise ValidationError(
             f"Package data {relative_path!r} is missing from the installed setspec. The schemas "
@@ -362,3 +353,5 @@ def _read_package_file(relative_path: str) -> str:
             "before it reaches an index.",
             details={"path": relative_path},
         ) from exc
+    parsed: dict[str, Any] = json.loads(text)
+    return parsed
