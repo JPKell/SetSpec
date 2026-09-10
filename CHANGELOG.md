@@ -7,8 +7,6 @@ packaging and release standards §3.
 
 ## [Unreleased]
 
-## [0.7.0] — 2026-09-10
-
 ### Added
 - `benchmark.result` and `benchmark.run_summary` `1.1` (row WA1, ADR-0135): sibling classes
   `BenchmarkResultV1_1Fields` / `BenchmarkRunSummaryV1_1Fields` and their `V1_1Out` / `V1_1In`

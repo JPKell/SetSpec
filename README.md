@@ -2,8 +2,9 @@
 
 Every versioned data contract that crosses an application boundary: benchmark results, capability evidence, event/error envelopes, prompt records.
 
-**Status:** `0.7.0` — Phases 1–2, 3A, 4, 5, 6 and 7 complete, and **the v1.0 contracts are frozen**,
-with four additive minors now published on top of that freeze. Four payload types remain frozen at
+**Status:** `0.6.0` — Phases 1–2, 3A, 4, 5, 6 and 7 complete, and **the v1.0 contracts are frozen**,
+with four additive minors on top of that freeze — two published, and row WA1's two on `main`,
+unreleased. Four payload types remain frozen at
 `1.0` only — `model.identity`, `machine.profile`, `benchmark.goal_pack` and
 `benchmark.calibration_report` — each with generated JSON Schema and at
 least three golden payloads shipped as package data. `setspec.DRAFT_SCHEMAS` is empty, which is
@@ -21,7 +22,7 @@ nesting `capability.evidence` `1.1` in place of the `1.0` element type its froze
 nests, so an exported bundle can now carry adapter-bearing evidence — absent any adapter,
 byte-identical to `1.0`.
 
-Row WA1 (`0.7.0`) gives `benchmark.result` and `benchmark.run_summary` an additive `1.1` each: the
+Row WA1 (unreleased — the version moves after the W arc) gives `benchmark.result` and `benchmark.run_summary` an additive `1.1` each: the
 embedded runtime profile can state `adapters_registered` (ADR-0074), which BaseAiCore's profile
 hash includes. A document that leaves it unstated is byte-identical to `1.0`. Unlike the earlier
 minors, a `1.0` reader refuses a document that states it, because the frozen hash check recomputes

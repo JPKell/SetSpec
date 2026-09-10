@@ -4,7 +4,7 @@ Every payload type `setspec` publishes, at every version, with the artifacts tha
 from a repository that shares no code with this one.
 
 **Status: frozen at `1.0`** (Phase 4, `setspec 0.3.0`), **with additive minors at Phase 6,
-Phase 7 and row WA1** (`setspec 0.5.0`, `0.6.0` and `0.7.0`). `DRAFT_SCHEMAS` is empty. From here every change follows
+Phase 7 and row WA1** (`setspec 0.5.0`, `0.6.0`, and on `main` unreleased). `DRAFT_SCHEMAS` is empty. From here every change follows
 the ordinary rules: a new optional field is a **minor** bump, and a removed, renamed, retyped or
 newly-tightened field is a **major**. Neither happens by editing a *published* payload module in
 place — the snapshot contract test fails the build if the generated schema stops matching the
