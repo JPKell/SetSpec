@@ -3,8 +3,8 @@
 Every payload type `setspec` publishes, at every version, with the artifacts that make it usable
 from a repository that shares no code with this one.
 
-**Status: frozen at `1.0`** (Phase 4, `setspec 0.3.0`), **with additive minors at Phase 6 and
-Phase 7** (`setspec 0.5.0` and `0.6.0`). `DRAFT_SCHEMAS` is empty. From here every change follows
+**Status: frozen at `1.0`** (Phase 4, `setspec 0.3.0`), **with additive minors at Phase 6,
+Phase 7 and row WA1** (`setspec 0.5.0`, `0.6.0` and `0.7.0`). `DRAFT_SCHEMAS` is empty. From here every change follows
 the ordinary rules: a new optional field is a **minor** bump, and a removed, renamed, retyped or
 newly-tightened field is a **major**. Neither happens by editing a *published* payload module in
 place — the snapshot contract test fails the build if the generated schema stops matching the
@@ -14,7 +14,10 @@ class** (`CapabilityEvidenceV1_1Fields`, alongside the untouched `CapabilityEvid
 than an edit in place, precisely so the `1.0` snapshot keeps regenerating identically forever.
 `benchmark.evidence_bundle` `1.1` (Phase 7) exercises the same rule transitively: it nests
 `capability.evidence` `1.1` in place of the `1.0` element type its own frozen `1.0` still nests,
-on the identical sibling-class mechanism (ADR-0068 rule 5).
+on the identical sibling-class mechanism (ADR-0068 rule 5). `benchmark.result` and
+`benchmark.run_summary` `1.1` (row WA1) use it a third time, for the runtime profile's
+`adapters_registered` — and are the one case where a `1.0` reader cannot read every `1.1`
+document (§2, [ADR-0135](../../adr/0135-a-minor-that-feeds-a-checked-hash-is-read-at-its-own-minor.md)).
 
 ---
 
@@ -43,7 +46,9 @@ an export never depends on a registry being reachable (spec §14).
 | `model.adapter_manifest` | 1.0 | `setspec.model.v1` | `AdapterManifestOut` / `AdapterManifestIn` | `minimal`, `full`, `name_only` |
 | `machine.profile` | 1.0 | `setspec.machine.v1` | `MachineProfileOut` / `MachineProfileIn` | `minimal`, `full`, `unsupported` |
 | `benchmark.result` | 1.0 | `setspec.benchmark.v1` | `BenchmarkResultOut` / `BenchmarkResultIn` | `minimal`, `full`, `unsupported` |
+| `benchmark.result` | 1.1 | `setspec.benchmark.v1` | `BenchmarkResultV1_1Out` / `BenchmarkResultV1_1In` | `minimal`, `full`, `unsupported` |
 | `benchmark.run_summary` | 1.0 | `setspec.benchmark.v1` | `BenchmarkRunSummaryOut` / `BenchmarkRunSummaryIn` | `minimal`, `full`, `unsupported` |
+| `benchmark.run_summary` | 1.1 | `setspec.benchmark.v1` | `BenchmarkRunSummaryV1_1Out` / `BenchmarkRunSummaryV1_1In` | `minimal`, `full`, `unsupported` |
 | `capability.evidence` | 1.0 | `setspec.capability.v1` | `CapabilityEvidenceOut` / `CapabilityEvidenceIn` | `minimal`, `full`, `goal`, `unsupported` |
 | `capability.evidence` | 1.1 | `setspec.capability.v1` | `CapabilityEvidenceV1_1Out` / `CapabilityEvidenceV1_1In` | `minimal`, `full`, `unsupported` |
 | `benchmark.evidence_bundle` | 1.0 | `setspec.capability.v1` | `EvidenceBundleOut` / `EvidenceBundleIn` | `minimal`, `full`, `unsupported` |
@@ -91,11 +96,24 @@ provenance set as nested objects: `suite`, `execution`, `environment`, `applicat
 `runtime_profile_hash` is recomputed from the embedded `runtime_profile` and must agree
 (ADR-0023). Four further cross-field rules apply — see §4.
 
+**`1.1`** (row WA1, ADR-0135) nests `RuntimeProfileV1_1Fields`, which adds `adapters_registered` —
+tri-state, as on `baseaicore.RuntimeProfile` (ADR-0074) — and hashes it when stated.
+`BenchmarkResultV1_1Fields(BenchmarkResultFields)` overrides only `runtime_profile`, and the key is
+dropped from the dump when unstated, so such a document is byte-identical to `1.0`. The goldens
+cover the three states: `minimal` unstated, `unsupported` `false`, `full` `true`. **Unlike every
+other minor in this catalogue, a `1.0` reader refuses a `1.1` document that states the field**,
+because the frozen class recomputes `runtime_profile_hash` without it. Read such documents with
+`BenchmarkResultV1_1In`.
+
 ### `benchmark.run_summary` — the roll-up of many results
 
 10 required of 15. Deliberately lighter than a result: the same subject/suite/environment building
 blocks, a run state, three timestamps and `aggregate_metrics`. `INTERRUPTED` is a distinct status
 from `FAILED` and means the process died and the run is resumable, not that it failed.
+
+**`1.1`** carries the same profile minor on `BenchmarkRunSummaryV1_1Fields`, with the same three
+goldens and the same limit. FreeWeight writes it for a run whose profile states the field, and
+`1.0` otherwise (ADR-0084).
 
 ### `capability.evidence` — the record LoadCoach routes on
 
@@ -227,6 +245,7 @@ none of the following appears in the published documents and all of them are enf
 | `model.adapter_manifest` | `name`/`artifact_sha256`/`source_sha256` must pass `baseaicore.AdapterIdentity`; `base.identity_confidence` must agree with whether `base.artifact_digest` is present; every `declared_capabilities` entry must be a known, non-bare-reserved-root vocabulary term |
 | `benchmark.result` | `runtime_profile_hash` must recompute from `runtime_profile`; `completed_at ≥ started_at`; `completed_cases ≤ total_cases`; `skip_reason` iff skipped; a completed result has metrics |
 | `benchmark.run_summary` | `runtime_profile_hash` agreement; timing order |
+| `benchmark.result` / `benchmark.run_summary` `1.1` | `runtime_profile_hash` recomputes with `adapters_registered` when stated — so the `1.0` model, which recomputes without it, refuses a stated document (ADR-0135) |
 | `capability.evidence` | `capability_id` in the vocabulary; `measured_at ≤ computed_at`; the five goal-group coherence rules; `score_method_mix` sums to 1 over known rungs |
 | `capability.evidence` `1.1` (nested `adapter`) | `canonical_suffix` must recompute from `name`/`artifact_digest` via `baseaicore.AdapterIdentity` |
 | `benchmark.goal_pack` | Criterion weights sum to 1; no duplicate keys; rung-appropriate fields; a judged criterion needs a jury |
@@ -249,7 +268,10 @@ something already published — follows the narrower pattern Phase 6 established
 `capability.evidence`: a sibling field-definition class in the *same* module, subclassing the
 frozen one and adding only optional fields, registered as a second entry in `artifacts._REGISTRY`
 alongside the untouched original. The frozen class is never edited, so nothing that nests it by
-reference (as `benchmark.evidence_bundle` nests `capability.evidence`) moves with it.
+reference (as `benchmark.evidence_bundle` nests `capability.evidence`) moves with it. A minor whose
+field feeds a hash the frozen class recomputes cannot be read by that class once the field is
+stated: `benchmark.result` and `benchmark.run_summary` `1.1` are that case, and
+`tests/contract/test_runtime_profile_minor.py` asserts the limit (ADR-0135).
 
 A snapshot can also move without any model here changing. Pydantic embeds a type's `__doc__` as
 its JSON Schema `description`, so an upstream release that only edits a docstring on a type these

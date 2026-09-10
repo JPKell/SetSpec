@@ -305,7 +305,11 @@ Coverage floor: **95 %**.
   transitively, at [Phase 7](development-plan.md): `benchmark.evidence_bundle` — which nests
   `capability.evidence` by reference — went from one published version to two
   (`EvidenceBundleFields` for `1.0`, `EvidenceBundleV1_1Fields` for `1.1`, the latter nesting
-  `CapabilityEvidenceV1_1Fields`) on the same mechanism, confirming rule 5's claim that the
+  `CapabilityEvidenceV1_1Fields`) on the same mechanism — and a third time at row WA1, where
+  `benchmark.result` and `benchmark.run_summary` `1.1` nest `RuntimeProfileV1_1Fields` and a `1.0`
+  reader refuses a document that states `adapters_registered`
+  ([ADR-0135](../../adr/0135-a-minor-that-feeds-a-checked-hash-is-read-at-its-own-minor.md)) —
+  confirming rule 5's claim that the
   nesting payload's own minor is a separate, later decision rather than something the nested
   payload's minor propagates automatically.
 * The schema compatibility job validates every published version against its goldens on every CI run.
