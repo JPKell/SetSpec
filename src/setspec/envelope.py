@@ -138,8 +138,8 @@ SUPPORTED_SCHEMAS: Final[Mapping[str, Mapping[int, SchemaVersion]]] = MappingPro
     {
         "model.identity": MappingProxyType({1: SchemaVersion(1, 0)}),
         "machine.profile": MappingProxyType({1: SchemaVersion(1, 0)}),
-        "benchmark.result": MappingProxyType({1: SchemaVersion(1, 0)}),
-        "benchmark.run_summary": MappingProxyType({1: SchemaVersion(1, 0)}),
+        "benchmark.result": MappingProxyType({1: SchemaVersion(1, 1)}),
+        "benchmark.run_summary": MappingProxyType({1: SchemaVersion(1, 1)}),
         "capability.evidence": MappingProxyType({1: SchemaVersion(1, 1)}),
         "benchmark.evidence_bundle": MappingProxyType({1: SchemaVersion(1, 1)}),
         "benchmark.goal_pack": MappingProxyType({1: SchemaVersion(1, 0)}),
@@ -180,7 +180,10 @@ from, and ``governance.egress_decision`` `1.0`, SetSpec's first payload under a 
 one payload out: ``benchmark.evidence_bundle`` gains its own `1.1`, whose ``evidence`` field nests
 `1.1` evidence records instead of `1.0` ones, so an exported bundle can now hold adapter-bearing
 records — a bundle carrying none is byte-identical to what `1.0` writes today (ADR-0068 rule 5).
-Every other entry is unchanged.
+Row WA1 (ADR-0135) gives ``benchmark.result`` and ``benchmark.run_summary`` a `1.1` each, nesting
+a runtime profile that can state ``adapters_registered``. Unlike the earlier minors, a `1.0` reader
+refuses a `1.1` document that states the field, because the frozen hash check recomputes without
+it. Every other entry is unchanged.
 
 Two payload types remain unregistered even after Phase 6: ``event.envelope`` and ``error.envelope``
 were planned for Phase 3, which was never implemented (see ``src/setspec/event/v1.py`` and

@@ -7,7 +7,29 @@ packaging and release standards §3.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-09-10
+
+### Added
+- `benchmark.result` and `benchmark.run_summary` `1.1` (row WA1, ADR-0135): sibling classes
+  `BenchmarkResultV1_1Fields` / `BenchmarkRunSummaryV1_1Fields` and their `V1_1Out` / `V1_1In`
+  pairs, nesting the new `RuntimeProfileV1_1Fields`, which adds `adapters_registered: bool | None`
+  (ADR-0074) and hashes it through `baseaicore.RuntimeProfile`. The key is left out of the dump
+  when unstated, so such a document is byte-identical to `1.0`. JSON Schemas and three goldens
+  each (`minimal` unstated, `unsupported` `false`, `full` `true`); `SUPPORTED_SCHEMAS` records
+  `1.1` for both. The `1.0` artifacts regenerate byte-identically, and the bare names keep meaning
+  `1.0`.
+
+### Fixed
+- A result or run summary for a run served by an adapter-capable provider — which FreeWeight
+  states as `adapters_registered` `true` or `false` — carried a `runtime_profile_hash` SetSpec could
+  not recompute, and was refused. It validates at `1.1`.
+
 ### Changed
+- **Requires `baseaicore>=0.4.2`**, the first release with `RuntimeProfile.adapters_registered`.
+- **A `1.0` reader refuses a `1.1` document that states `adapters_registered`**, with a
+  `runtime_profile_hash` mismatch: the frozen class recomputes the hash without the field. This is
+  the one exception to "readers accept a newer minor", named in ADR-0135 and asserted by
+  `tests/contract/test_runtime_profile_minor.py`. Read such documents with the `V1_1In` names.
 - Internal tightening with no wire or behavioural change: `prompts.load_record` is the one record
   loader (the private twin is gone) and the two pack walkers share one helper; `artifacts` reads
   package JSON through one function; `SchemaVersionUnsupported` no longer overrides `__init__`

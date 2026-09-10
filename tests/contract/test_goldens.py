@@ -265,7 +265,7 @@ class TestAskingForSomethingUnpublished:
         with pytest.raises(SchemaVersionUnsupported) as raised:
             payload_pair("benchmark.result", SchemaVersion(2, 0))
         assert raised.value.details["received"] == "2.0"
-        assert raised.value.details["supported"] == ["1.0"]
+        assert raised.value.details["supported"] == ["1.0", "1.1"]
 
     def test_goldens_for_an_unpublished_version_are_refused_the_same_way(self) -> None:
         with pytest.raises(SchemaVersionUnsupported):

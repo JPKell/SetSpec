@@ -2,10 +2,10 @@
 
 Every versioned data contract that crosses an application boundary: benchmark results, capability evidence, event/error envelopes, prompt records.
 
-**Status:** `0.6.0` — Phases 1–2, 3A, 4, 5, 6 and 7 complete, and **the v1.0 contracts are frozen**,
-with two additive minors now published on top of that freeze. Six payload types remain frozen at
-`1.0` only — `model.identity`, `machine.profile`, `benchmark.result`, `benchmark.run_summary`,
-`benchmark.goal_pack` and `benchmark.calibration_report` — each with generated JSON Schema and at
+**Status:** `0.7.0` — Phases 1–2, 3A, 4, 5, 6 and 7 complete, and **the v1.0 contracts are frozen**,
+with four additive minors now published on top of that freeze. Four payload types remain frozen at
+`1.0` only — `model.identity`, `machine.profile`, `benchmark.goal_pack` and
+`benchmark.calibration_report` — each with generated JSON Schema and at
 least three golden payloads shipped as package data. `setspec.DRAFT_SCHEMAS` is empty, which is
 where the freeze is readable at runtime rather than only stated here; from now on a new optional
 field is a minor bump and anything else is a major, enforced by a snapshot diff in CI.
@@ -19,8 +19,15 @@ carrying a recorded egress verdict for a reader that has Commissioner installed 
 carries that same minor one payload out: `benchmark.evidence_bundle` gains its own additive `1.1`,
 nesting `capability.evidence` `1.1` in place of the `1.0` element type its frozen `1.0` still
 nests, so an exported bundle can now carry adapter-bearing evidence — absent any adapter,
-byte-identical to `1.0`. `capability.evidence` and `benchmark.evidence_bundle` are therefore the
-two payload types with a second published minor; every other payload type remains exactly `1.0`.
+byte-identical to `1.0`.
+
+Row WA1 (`0.7.0`) gives `benchmark.result` and `benchmark.run_summary` an additive `1.1` each: the
+embedded runtime profile can state `adapters_registered` (ADR-0074), which BaseAiCore's profile
+hash includes. A document that leaves it unstated is byte-identical to `1.0`. Unlike the earlier
+minors, a `1.0` reader refuses a document that states it, because the frozen hash check recomputes
+without the field — read such documents with `BenchmarkResultV1_1In` / `BenchmarkRunSummaryV1_1In`
+(ADR-0135). Those four are the payload types with a second published minor; every other payload
+type remains exactly `1.0`.
 
 The [schema catalogue](docs/packages/setspec/schemas.md) lists every payload type, its artifacts, and the
 cross-field rules the JSON Schema cannot express. Event and error envelopes (Phase 3) are not yet

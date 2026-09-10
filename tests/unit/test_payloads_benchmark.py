@@ -19,8 +19,11 @@ from setspec import canonical_dumps
 from setspec.benchmark.v1 import (
     BenchmarkResultIn,
     BenchmarkResultOut,
+    BenchmarkResultV1_1Out,
     BenchmarkRunSummaryOut,
+    BenchmarkRunSummaryV1_1Out,
     RuntimeProfileFields,
+    RuntimeProfileV1_1Fields,
 )
 
 _STARTED_AT = datetime(2026, 8, 22, 9, 14, 0, tzinfo=UTC)
@@ -480,3 +483,57 @@ class TestRuntimeProfileHashProperty:
     def test_a_changed_field_changes_the_hash(self) -> None:
         baseline = RuntimeProfileFields(context_size=8192)
         assert baseline.profile_hash != RuntimeProfileFields(context_size=4096).profile_hash
+
+
+class TestRuntimeProfileV1_1:
+    """`adapters_registered` on the wire (ADR-0074, ADR-0135): one hash, computed identically by
+    BaseAiCore and by SetSpec, in each of the field's three states."""
+
+    @pytest.mark.parametrize("state", [None, False, True])
+    def test_it_hashes_identically_through_baseaicore_and_setspec(self, state: bool | None) -> None:
+        fields = RuntimeProfileV1_1Fields.model_validate(
+            {**_runtime_profile(), "adapters_registered": state}
+        )
+        domain = RuntimeProfile(
+            context_size=8192, gpu_layers=99, flash_attention=True, adapters_registered=state
+        )
+        assert fields.profile_hash == domain.profile_hash
+
+    def test_an_unstated_field_hashes_as_1_0_does(self) -> None:
+        fields = RuntimeProfileV1_1Fields.model_validate(_runtime_profile())
+        assert fields.profile_hash == _RUNTIME_PROFILE_HASH
+
+    def test_the_three_states_are_three_hashes(self) -> None:
+        states = (None, False, True)
+        hashes = {RuntimeProfileV1_1Fields(adapters_registered=s).profile_hash for s in states}
+        assert len(hashes) == len(states)
+
+    def test_an_unstated_field_is_left_out_of_the_dump(self) -> None:
+        assert "adapters_registered" not in RuntimeProfileV1_1Fields().model_dump()
+
+    def test_false_is_stated_and_stays_in_the_dump(self) -> None:
+        """Dropped as falsy, it would publish a profile that no longer recomputes its hash."""
+        dumped = RuntimeProfileV1_1Fields(adapters_registered=False).model_dump()
+        assert dumped["adapters_registered"] is False
+
+    @pytest.mark.parametrize("state", [False, True])
+    @pytest.mark.parametrize(
+        ("builder", "writer_1_0", "writer_1_1"),
+        [
+            (_result, BenchmarkResultOut, BenchmarkResultV1_1Out),
+            (_run_summary, BenchmarkRunSummaryOut, BenchmarkRunSummaryV1_1Out),
+        ],
+    )
+    def test_a_stated_document_validates_at_1_1_and_is_refused_at_1_0(
+        self, state: bool, builder: Any, writer_1_0: Any, writer_1_1: Any
+    ) -> None:
+        """The defect row WA1 closes, and the limit ADR-0135 names: one document, two minors."""
+        profile = {**_runtime_profile(), "adapters_registered": state}
+        document = builder(
+            runtime_profile=profile,
+            runtime_profile_hash=RuntimeProfile(**profile).profile_hash,
+        )
+        dumped = writer_1_1.model_validate(document).model_dump()
+        assert dumped["runtime_profile"]["adapters_registered"] is state
+        with pytest.raises(PydanticValidationError, match="runtime_profile_hash"):
+            writer_1_0.model_validate(document)

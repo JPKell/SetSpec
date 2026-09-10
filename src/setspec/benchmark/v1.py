@@ -26,6 +26,17 @@ entry of ``dataset_hashes``) is validated only as a non-empty string: this packa
 compute FreeWeight's own manifest or fingerprint hashes, and guessing a format — hex-only, with or
 without an algorithm prefix — risks rejecting the first real result over a formatting nuance
 instead of the risk the tests actually target.
+
+**`1.1` (row WA1, ADR-0135).** :class:`baseaicore.RuntimeProfile` gained ``adapters_registered``
+after this module froze (ADR-0074), and its ``profile_hash`` includes the field whenever it is
+stated — so a result measured on an adapter-capable server carried a hash the frozen
+:class:`RuntimeProfileFields` could not recompute. :class:`RuntimeProfileV1_1Fields` adds the
+field, and :class:`BenchmarkResultV1_1Fields` and :class:`BenchmarkRunSummaryV1_1Fields` nest it in
+place of the frozen profile, each a sibling of its frozen class (ADR-0068). A document that leaves
+the field unstated dumps byte-for-byte what `1.0` writes. A document that states it is refused by
+every `1.0` reader, because the frozen class's hash check recomputes without it — a permanent,
+tested limit (ADR-0135 rule 2). The bare names keep meaning `1.0`; a producer or reader wanting
+the field imports the ``V1_1`` names.
 """
 
 from __future__ import annotations
@@ -34,7 +45,7 @@ from enum import StrEnum
 from typing import Any, Self
 
 from baseaicore import UNSUPPORTED, RuntimeProfile
-from pydantic import Field, model_validator
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
 from setspec.base import PayloadDefinition, WireEnum, WireSequence, payload_models
 from setspec.machine.v1 import MachineProfileFields
@@ -49,9 +60,15 @@ __all__ = [
     "BenchmarkResultIn",
     "BenchmarkResultOut",
     "BenchmarkResultStatus",
+    "BenchmarkResultV1_1Fields",
+    "BenchmarkResultV1_1In",
+    "BenchmarkResultV1_1Out",
     "BenchmarkRunSummaryFields",
     "BenchmarkRunSummaryIn",
     "BenchmarkRunSummaryOut",
+    "BenchmarkRunSummaryV1_1Fields",
+    "BenchmarkRunSummaryV1_1In",
+    "BenchmarkRunSummaryV1_1Out",
     "BenchmarkSuiteProvenanceFields",
     "ExecutionProvenanceFields",
     "MeasurementClass",
@@ -59,6 +76,7 @@ __all__ = [
     "ReproducibilityFingerprintFields",
     "RunStatus",
     "RuntimeProfileFields",
+    "RuntimeProfileV1_1Fields",
     "ServedContextSource",
     "TelemetrySummaryFields",
 ]
@@ -115,6 +133,58 @@ class RuntimeProfileFields(PayloadDefinition):
             threads=self.threads,
             batch_size=self.batch_size,
             keep_alive=self.keep_alive,
+            provider_options=dict(self.provider_options),
+        ).profile_hash
+
+
+class RuntimeProfileV1_1Fields(RuntimeProfileFields):
+    """How a provider was asked to load and serve the model, at `1.1` — nested only.
+
+    Adds one optional field to :class:`RuntimeProfileFields` (ADR-0074, ADR-0135). A profile that
+    leaves it unstated dumps and hashes exactly as `1.0` does. A profile that states it hashes
+    differently, which is why a `1.0` reader refuses a document that states it.
+
+    Attributes:
+        adapters_registered: Whether the serving provider was launched with LoRA adapters
+            registered. ``None`` means not stated and is left out of the dump; ``False`` and
+            ``True`` are stated, and both are hashed (ADR-0074 §1–§2).
+    """
+
+    adapters_registered: bool | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unstated_adapters_registered(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> dict[str, Any]:
+        """Drop ``adapters_registered`` from the dump when it is ``None``, never emit ``null``.
+
+        ``False`` is a stated value and is kept: it hashes, and dropping it would publish a
+        profile whose embedded fields no longer recompute its hash (ADR-0068 rule 4).
+        """
+        data: dict[str, Any] = handler(self)
+        if self.adapters_registered is None:
+            data.pop("adapters_registered", None)
+        return data
+
+    @property
+    def profile_hash(self) -> str:
+        """Return this profile's 16-character hash, ``adapters_registered`` included when stated.
+
+        Delegates to :class:`baseaicore.RuntimeProfile` for the reason the `1.0` property does.
+
+        Returns:
+            16 lowercase hex characters, identical to what
+            :attr:`baseaicore.RuntimeProfile.profile_hash` computes for the same field values.
+        """
+        return RuntimeProfile(
+            context_size=self.context_size,
+            kv_cache_precision=self.kv_cache_precision,
+            gpu_layers=self.gpu_layers,
+            flash_attention=self.flash_attention,
+            threads=self.threads,
+            batch_size=self.batch_size,
+            keep_alive=self.keep_alive,
+            adapters_registered=self.adapters_registered,
             provider_options=dict(self.provider_options),
         ).profile_hash
 
@@ -494,6 +564,27 @@ BenchmarkResultOut, BenchmarkResultIn = payload_models(BenchmarkResultFields)
 """The ``benchmark.result`` payload pair: ``Out`` for writers, ``In`` for readers."""
 
 
+class BenchmarkResultV1_1Fields(BenchmarkResultFields):
+    """Field definitions for ``benchmark.result`` `1.1`; use :data:`BenchmarkResultV1_1Out` /
+    :data:`BenchmarkResultV1_1In`.
+
+    Overrides one inherited field: ``runtime_profile`` validates through
+    :class:`RuntimeProfileV1_1Fields`, so a result can state ``adapters_registered`` and the
+    inherited hash check recomputes the hash with it (ADR-0074, ADR-0135). A result that leaves it
+    unstated dumps byte-for-byte what `1.0` writes; a `1.0` reader refuses one that states it.
+
+    Attributes:
+        runtime_profile: How the provider was asked to serve the model, ``adapters_registered``
+            included when stated.
+    """
+
+    runtime_profile: RuntimeProfileV1_1Fields
+
+
+BenchmarkResultV1_1Out, BenchmarkResultV1_1In = payload_models(BenchmarkResultV1_1Fields)
+"""The ``benchmark.result`` `1.1` payload pair: ``Out`` for writers, ``In`` for readers."""
+
+
 class RunStatus(StrEnum):
     """A run's state, mirroring FreeWeight's run state machine (data model §3).
 
@@ -593,3 +684,26 @@ class BenchmarkRunSummaryFields(PayloadDefinition):
 
 BenchmarkRunSummaryOut, BenchmarkRunSummaryIn = payload_models(BenchmarkRunSummaryFields)
 """The ``benchmark.run_summary`` payload pair: ``Out`` for writers, ``In`` for readers."""
+
+
+class BenchmarkRunSummaryV1_1Fields(BenchmarkRunSummaryFields):
+    """Field definitions for ``benchmark.run_summary`` `1.1`; use
+    :data:`BenchmarkRunSummaryV1_1Out` / :data:`BenchmarkRunSummaryV1_1In`.
+
+    Overrides one inherited field, exactly as :class:`BenchmarkResultV1_1Fields` does:
+    ``runtime_profile`` validates through :class:`RuntimeProfileV1_1Fields`. A summary that leaves
+    ``adapters_registered`` unstated dumps byte-for-byte what `1.0` writes; a `1.0` reader refuses
+    one that states it (ADR-0135).
+
+    Attributes:
+        runtime_profile: The runtime profile every benchmark in this run measured under,
+            ``adapters_registered`` included when stated.
+    """
+
+    runtime_profile: RuntimeProfileV1_1Fields
+
+
+BenchmarkRunSummaryV1_1Out, BenchmarkRunSummaryV1_1In = payload_models(
+    BenchmarkRunSummaryV1_1Fields
+)
+"""The ``benchmark.run_summary`` `1.1` payload pair: ``Out`` for writers, ``In`` for readers."""

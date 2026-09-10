@@ -46,8 +46,12 @@ from pydantic.json_schema import PydanticJsonSchemaWarning
 from setspec.benchmark.v1 import (
     BenchmarkResultIn,
     BenchmarkResultOut,
+    BenchmarkResultV1_1In,
+    BenchmarkResultV1_1Out,
     BenchmarkRunSummaryIn,
     BenchmarkRunSummaryOut,
+    BenchmarkRunSummaryV1_1In,
+    BenchmarkRunSummaryV1_1Out,
 )
 from setspec.capability.v1 import (
     CapabilityEvidenceIn,
@@ -117,10 +121,16 @@ _REGISTRY: Final[
         "model.identity": MappingProxyType({_VERSION_1_0: (ModelIdentityOut, ModelIdentityIn)}),
         "machine.profile": MappingProxyType({_VERSION_1_0: (MachineProfileOut, MachineProfileIn)}),
         "benchmark.result": MappingProxyType(
-            {_VERSION_1_0: (BenchmarkResultOut, BenchmarkResultIn)}
+            {
+                _VERSION_1_0: (BenchmarkResultOut, BenchmarkResultIn),
+                _VERSION_1_1: (BenchmarkResultV1_1Out, BenchmarkResultV1_1In),
+            }
         ),
         "benchmark.run_summary": MappingProxyType(
-            {_VERSION_1_0: (BenchmarkRunSummaryOut, BenchmarkRunSummaryIn)}
+            {
+                _VERSION_1_0: (BenchmarkRunSummaryOut, BenchmarkRunSummaryIn),
+                _VERSION_1_1: (BenchmarkRunSummaryV1_1Out, BenchmarkRunSummaryV1_1In),
+            }
         ),
         "capability.evidence": MappingProxyType(
             {

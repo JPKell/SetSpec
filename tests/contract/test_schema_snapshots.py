@@ -127,14 +127,22 @@ class TestTheRegistryAndTheWireAgree:
             assert set(majors) == published_majors
 
 
-_NAMED_EXCEPTIONS = frozenset({"capability.evidence 1.1", "benchmark.evidence_bundle 1.1"})
+_NAMED_EXCEPTIONS = frozenset(
+    {
+        "capability.evidence 1.1",
+        "benchmark.evidence_bundle 1.1",
+        "benchmark.result 1.1",
+        "benchmark.run_summary 1.1",
+    }
+)
 """Every published version that is not exactly `1.0`, and the phase each came from.
 
 ``capability.evidence 1.1`` — Phase 6 (ADR-0058): the adapter axis's first landing, an optional
 ``adapter`` field on a sibling class. ``benchmark.evidence_bundle 1.1`` — Phase 7 (ADR-0068 rule
 5): the same minor carried one payload out, so an exported bundle can nest adapter-bearing
-records. Both are additive and both leave their `1.0` sibling untouched; extend this set by name,
-never by widening the test below to a count, when a third minor is published.
+records. ``benchmark.result 1.1`` and ``benchmark.run_summary 1.1`` — row WA1 (ADR-0135): the
+runtime profile's ``adapters_registered``, nested by both. All four leave their `1.0` sibling
+untouched; extend this set by name, never by widening the test below to a count.
 """
 
 
@@ -183,6 +191,11 @@ class TestTheFreezeHolds:
             SchemaVersion(1, 0),
             SchemaVersion(1, 1),
         )
+
+    def test_the_two_payloads_that_embed_a_runtime_profile_have_a_second_minor(self) -> None:
+        """Row WA1's minors (ADR-0135), named rather than counted, like the two above."""
+        for schema in ("benchmark.result", "benchmark.run_summary"):
+            assert PUBLISHED_SCHEMAS[schema] == (SchemaVersion(1, 0), SchemaVersion(1, 1))
 
 
 class TestMetricKeyIsTheSpelling:
